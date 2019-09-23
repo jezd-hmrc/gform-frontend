@@ -313,7 +313,6 @@ helper.order={0} {1}
 # Summary alert
 summary.alert.title=Issues with your form
 
-
 # Accessibility statement link
 footer.links.accessibility.title=Accessibility
 footer.links.accessibility.text=Accessibility
