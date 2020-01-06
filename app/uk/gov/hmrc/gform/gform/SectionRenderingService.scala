@@ -22,6 +22,7 @@ import java.time.format.DateTimeFormatter
 
 import cats.data.NonEmptyList
 import cats.data.Validated.{ Invalid, Valid }
+import cats.instances.string._
 import cats.syntax.eq._
 import cats.syntax.validated._
 import play.api.i18n.Messages
@@ -54,6 +55,15 @@ import uk.gov.hmrc.gform.eval.smartstring.SmartStringEvaluationSyntax
 import uk.gov.hmrc.gform.validation.ValidationUtil.ValidatedType
 import uk.gov.hmrc.gform.validation._
 import uk.gov.hmrc.gform.views.{ ViewHelpersAlgebra, html }
+import uk.gov.hmrc.govukfrontend.views.html.components
+import uk.gov.hmrc.govukfrontend.views.viewmodels.input.Input
+import uk.gov.hmrc.govukfrontend.views.viewmodels.hint.Hint
+import uk.gov.hmrc.govukfrontend.views.viewmodels.label.Label
+import uk.gov.hmrc.govukfrontend.views.viewmodels.fieldset.{ Fieldset, Legend }
+import uk.gov.hmrc.govukfrontend.views.viewmodels.radios.Radios
+import uk.gov.hmrc.govukfrontend.views.viewmodels.errormessage.ErrorMessage
+import uk.gov.hmrc.govukfrontend.views.viewmodels.radios.RadioItem
+import uk.gov.hmrc.govukfrontend.views.viewmodels.content
 
 import scala.concurrent.Future
 import uk.gov.hmrc.http.HeaderCarrier
@@ -444,6 +454,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
       case t @ TextArea(_, _, _) =>
         renderTextArea(messages, l, sse)(t, formComponent, index, maybeValidated, ei, data, isHidden)
       case Choice(choice, options, orientation, selections, optionalHelpText) =>
+        println("options: " + (options))
         htmlForChoice(
           formComponent,
           choice,
@@ -560,18 +571,67 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     val validatedValue = buildFormFieldValidationResult(formComponent, ei, validatedType, data)
     choice match {
       case Radio | YesNo =>
-        html.form.snippets.choice(
-          "radio",
-          formComponent,
-          options,
-          orientation,
-          prepopValues,
-          validatedValue,
-          optionalHelpTextMarkDown,
-          index,
-          ei.section.title,
-          ei.formLevelHeading
+        val items = options.zipWithIndex.map {
+          case (option, index) =>
+            RadioItem(
+              id = Some(formComponent.id.appendIndex(index).value),
+              value = Some(index.toString),
+              content = content.Text(option.value),
+              checked = validatedValue
+                .flatMap(_.getOptionalCurrentValue(formComponent.id.value + index.toString))
+                .orElse(prepopValues.find(_ === index.toString))
+                .isDefined
+            )
+        }
+
+        val hint = formComponent.helpText.map { ls =>
+          Hint(
+            content = content.Text(ls.value)
+          )
+        }
+
+        val fieldset = Some(
+          Fieldset(
+            legend = Some(
+              Legend(
+                content = content.Text(formComponent.label.value),
+                isPageHeading = ei.formLevelHeading
+              ))
+          ))
+
+        val map: Map[String, Set[String]] =
+          validatedValue.map(x => ValidationUtil.renderErrors("", x)).getOrElse(Map.empty)
+        val errors: Option[String] = ValidationUtil.printErrors(map).headOption
+
+        val radios = Radios(
+          fieldset = fieldset,
+          hint = hint,
+          errorMessage = errors.map(
+            error =>
+              ErrorMessage(
+                content = content.Text(error)
+            )),
+          name = formComponent.id.value,
+          items = items.toList
         )
+
+        val govukErrorMessage: components.govukErrorMessage = new components.govukErrorMessage()
+        val govukFieldset: components.govukFieldset = new components.govukFieldset()
+        val govukHint: components.govukHint = new components.govukHint()
+        val govukLabel: components.govukLabel = new components.govukLabel()
+        new components.govukRadios(govukErrorMessage, govukFieldset, govukHint, govukLabel)(radios)
+      /* html.form.snippets.choice(
+       *   "radio",
+       *   formComponent,
+       *   options,
+       *   orientation,
+       *   prepopValues,
+       *   validatedValue,
+       *   optionalHelpTextMarkDown,
+       *   index,
+       *   ei.section.title,
+       *   ei.formLevelHeading
+       * ) */
       case Checkbox =>
         html.form.snippets.choice(
           "checkbox",
@@ -706,7 +766,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     ei: ExtraInfo,
     data: FormDataRecalculated,
     isHidden: Boolean
-  )(implicit messages: Messages, l: LangADT, sse: SmartStringEvaluator) = {
+  )(implicit messages: Messages, l: LangADT, sse: SmartStringEvaluator): Html = {
     val prepopValue = ei.fieldData.data.one(formComponent.id)
     val validatedValue = buildFormFieldValidationResult(formComponent, ei, validatedType, data)
     if (isHidden)
@@ -725,7 +785,39 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
             ei.section.title.value,
             ei.formLevelHeading)
         case _ =>
-          asStandard(formComponent, t, prepopValue, validatedValue, index, ei.section.title.value, ei.formLevelHeading)
+          val label = Label(
+            isPageHeading = ei.formLevelHeading,
+            content = content.Text(LabelHelper.buildRepeatingLabel(formComponent.label, index).value)
+          )
+          val hint = formComponent.helpText.map { ls =>
+            Hint(
+              content = content.Text(ls.value)
+            )
+          }
+
+          val map: Map[String, Set[String]] =
+            validatedValue.map(x => ValidationUtil.renderErrors("", x)).getOrElse(Map.empty)
+          val errors: Option[String] = ValidationUtil.printErrors(map).headOption
+
+          val errorMessage = errors.map(
+            error =>
+              ErrorMessage(
+                content = content.Text(error)
+            ))
+
+          val input = Input(
+            id = formComponent.id.value,
+            name = formComponent.id.value,
+            label = label,
+            hint = hint,
+            value = prepopValue.orElse(validatedValue.flatMap(_.getCurrentValue)),
+            errorMessage = errorMessage
+          )
+          val govukErrorMessage: components.govukErrorMessage = new components.govukErrorMessage()
+          val govukHint: components.govukHint = new components.govukHint()
+          val govukLabel: components.govukLabel = new components.govukLabel()
+          new components.govukInput(govukErrorMessage, govukHint, govukLabel)(input)
+        //asStandard(formComponent, t, prepopValue, validatedValue, index, ei.section.title.value, ei.formLevelHeading)
       }
     }
   }

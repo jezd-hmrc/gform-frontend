@@ -19,7 +19,7 @@ import play.api.i18n.Lang
 
 case class FrontendAppConfig(
   albAdminIssuerUrl: String,
-  assetsPrefix: String,
+  //assetsPrefix: String,
   analyticsToken: String,
   analyticsHost: String,
   reportAProblemPartialUrl: String,

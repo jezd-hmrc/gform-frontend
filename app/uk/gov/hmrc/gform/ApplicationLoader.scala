@@ -48,8 +48,8 @@ import uk.gov.hmrc.gform.testonly.TestOnlyModule
 import uk.gov.hmrc.gform.validation.ValidationModule
 import uk.gov.hmrc.gform.views.{ ViewHelpers, ViewHelpersAlgebra }
 import uk.gov.hmrc.gform.wshttp.WSHttpModule
-import uk.gov.hmrc.play.config.{ AssetsConfig, GTMConfig, OptimizelyConfig }
-import uk.gov.hmrc.play.views.html.layouts.{ GTMSnippet, OptimizelySnippet }
+//import uk.gov.hmrc.play.config.{ AssetsConfig, GTMConfig, OptimizelyConfig }
+//import uk.gov.hmrc.play.views.html.layouts.{ GTMSnippet, OptimizelySnippet }
 
 class ApplicationLoader extends play.api.ApplicationLoader {
   def load(context: Context): Application = {
@@ -81,10 +81,18 @@ class ApplicationModule(context: Context)
       new ApplicationConfig(context.initialConfiguration)
     )
 
+  /* val assetsConfiguration: _root_.controllers.AssetsConfiguration =
+   *   _root_.controllers.AssetsConfigurationProvider(environment, configuration).get */
+
+  //val fileMimeTypes: FileMimeTypes = ???
+  //val fileMimeTypes = new DefaultFileMimeTypesProvider(httpConfiguration.fileMimeTypes).get
+  /* val assetsMetadata: _root_.controllers.AssetsMetadata =
+   *   new _root_.controllers.AssetsMetadataProvider(environment, assetsConfiguration, fileMimeTypes, applicationLifecycle).get */
+
   private implicit val viewHelpers: ViewHelpersAlgebra = new ViewHelpers(
-    new OptimizelySnippet(new OptimizelyConfig(context.initialConfiguration)),
-    new AssetsConfig(context.initialConfiguration),
-    new GTMSnippet(new GTMConfig(context.initialConfiguration)),
+    /* new OptimizelySnippet(new OptimizelyConfig(context.initialConfiguration)),
+     * new AssetsConfig(context.initialConfiguration),
+     * new GTMSnippet(new GTMConfig(context.initialConfiguration)), */
     webchatClient
   )
 
@@ -212,19 +220,20 @@ class ApplicationModule(context: Context)
     frontendFiltersModule,
     controllersModule,
     this,
-    httpErrorHandler
+    httpErrorHandler,
+    assetsMetadata
   )
 
   override lazy val httpRequestHandler: HttpRequestHandler = routingModule.httpRequestHandler
   override val httpFilters: Seq[EssentialFilter] = frontendFiltersModule.httpFilters
   override def router: Router = routingModule.router
 
-  val optimizelyConfig: OptimizelyConfig = new OptimizelyConfig(configuration)
-  val assetsConfig: AssetsConfig = new AssetsConfig(configuration)
-  val gtmConfig: GTMConfig = new GTMConfig(configuration)
+  //val optimizelyConfig: OptimizelyConfig = new OptimizelyConfig(configuration)
+  //val assetsConfig: AssetsConfig = new AssetsConfig(configuration)
+  //val gtmConfig: GTMConfig = new GTMConfig(configuration)
 
   val customInjector: Injector =
-    new SimpleInjector(injector) + wsClient + optimizelyConfig + assetsConfig + gtmConfig
+    new SimpleInjector(injector) + wsClient /* + optimizelyConfig + assetsConfig + gtmConfig */
 
   private val app = new DefaultApplication(
     environment,
