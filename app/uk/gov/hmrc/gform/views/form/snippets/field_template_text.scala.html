@@ -22,6 +22,7 @@
 @import uk.gov.hmrc.gform.views.html.form.errors.inline_error_map
 @import uk.gov.hmrc.gform.views.summary.TextFormatter
 
+
 @(fieldValue: FormComponent,
   text: Text,
   prepop: Option[String],
@@ -56,22 +57,24 @@
 
 @sizeClasses = @{
   text.displayWidth match {
-    case DisplayWidth.XS => "form-control-1-8"
-    case DisplayWidth.S => "form-control-1-4"
-    case DisplayWidth.M => "form-control-1-3"
-    case DisplayWidth.L => "form-control-1-2"
-    case DisplayWidth.XL => "form-control-2-3"
-    case DisplayWidth.XXL => "form-control-3-4"
+    case DisplayWidth.XS => "govuk-!-width-one-quarter"
+    case DisplayWidth.S => "govuk-!-width-one-third"
+    case DisplayWidth.M => "govuk-!-width-one-half"
+    case DisplayWidth.L => "govuk-!-width-two-thirds"
+    case DisplayWidth.XL => "govuk-!-width-three-quarters"
+    case DisplayWidth.XXL => "govuk-!-width-full"
     case DisplayWidth.DEFAULT => if(TextFormatter.isNumber(fieldValue) || fieldValue.isSterling) "form-control--numeric" else "form-control-1-2"
   }
 }
 
+
 @label = {
-  <label class="@{if(!formLevelHeading){"h1-heading"} else {"form-label"}}@if(fieldValue.derived){ js-hidden}" for="@{fieldValue.id}">
-    @LabelHelper.buildRepeatingLabel(fieldValue.label, index).value
-    @sterlingHelp
-  </label>
-  }
+<label class="@{if(!formLevelHeading){"h1-heading"} else {"form-label"}}@if(fieldValue.derived){ js-hidden}" for="@{fieldValue.id}">
+@LabelHelper.buildRepeatingLabel(fieldValue.label, index).value
+@sterlingHelp
+</label>
+}
+
 
 <div class="form-group @if(hasErrors) {form-group-error}">
 
@@ -107,3 +110,4 @@
     </span>
     }
 </div>
+

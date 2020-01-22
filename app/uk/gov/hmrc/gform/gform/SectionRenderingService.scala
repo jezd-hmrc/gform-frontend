@@ -64,6 +64,7 @@ import uk.gov.hmrc.govukfrontend.views.viewmodels.radios.Radios
 import uk.gov.hmrc.govukfrontend.views.viewmodels.errormessage.ErrorMessage
 import uk.gov.hmrc.govukfrontend.views.viewmodels.radios.RadioItem
 import uk.gov.hmrc.govukfrontend.views.viewmodels.content
+import uk.gov.hmrc.govukfrontend.views.viewmodels.checkboxes.{ CheckboxItem, Checkboxes }
 
 import scala.concurrent.Future
 import uk.gov.hmrc.http.HeaderCarrier
@@ -633,7 +634,56 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
        *   ei.formLevelHeading
        * ) */
       case Checkbox =>
-        html.form.snippets.choice(
+        val items = options.zipWithIndex.map {
+          case (option, index) =>
+            CheckboxItem(
+              id = Some(formComponent.id.appendIndex(index).value),
+              value = index.toString,
+              content = content.Text(option.value),
+              checked = validatedValue
+                .flatMap(_.getOptionalCurrentValue(formComponent.id.value + index.toString))
+                .orElse(prepopValues.find(_ === index.toString))
+                .isDefined
+            )
+        }
+
+        val hint = formComponent.helpText.map { ls =>
+          Hint(
+            content = content.Text(ls.value)
+          )
+        }
+
+        val fieldset = Some(
+          Fieldset(
+            legend = Some(
+              Legend(
+                content = content.Text(formComponent.label.value),
+                isPageHeading = ei.formLevelHeading
+              ))
+          ))
+
+        val map: Map[String, Set[String]] =
+          validatedValue.map(x => ValidationUtil.renderErrors("", x)).getOrElse(Map.empty)
+        val errors: Option[String] = ValidationUtil.printErrors(map).headOption
+
+        val checkboxes = Checkboxes(
+          fieldset = fieldset,
+          hint = hint,
+          errorMessage = errors.map(
+            error =>
+              ErrorMessage(
+                content = content.Text(error)
+            )),
+          name = formComponent.id.value,
+          items = items.toList
+        )
+
+        val govukErrorMessage: components.govukErrorMessage = new components.govukErrorMessage()
+        val govukFieldset: components.govukFieldset = new components.govukFieldset()
+        val govukHint: components.govukHint = new components.govukHint()
+        val govukLabel: components.govukLabel = new components.govukLabel()
+        new components.govukCheckboxes(govukErrorMessage, govukFieldset, govukHint, govukLabel)(checkboxes)
+      /* html.form.snippets.choice(
           "checkbox",
           formComponent,
           options,
@@ -644,7 +694,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
           index,
           ei.section.title,
           ei.formLevelHeading
-        )
+        )*/
       case Inline =>
         html.form.snippets.choiceInline(
           formComponent,

@@ -44,11 +44,11 @@ formLevelHeading: Boolean
   LabelHelper.buildRepeatingLabel(fieldValue.label, index).value
 }
 
-<div class="form-group@if(hasErrors) { form-group-error}">
-    <fieldset @if(fieldValue.helpText.nonEmpty){ aria-describedby="@{fieldValue.id.value}-hint" }>
+<div class="govuk-form-group@if(hasErrors) { govuk-form-group--error}">
+    <fieldset class="govuk-fieldset" @if(fieldValue.helpText.nonEmpty){ aria-describedby="@{fieldValue.id.value}-hint"}>
         <legend class="form-label.value">
           @if(!formLevelHeading) {
-            <h1>@label</h1>
+            <h1 class="govuk-heading-l">@label</h1>
           } else {
             @label
           }
@@ -57,12 +57,12 @@ formLevelHeading: Boolean
         @if(fieldValue.helpText.nonEmpty) {
           <span class="form-hint" id="@{fieldValue.id.value}-hint">@{fieldValue.helpText.map(ls=>ls.value).getOrElse("")}</span>
         }
-
+        <div class="govuk-@{buttonType}s govuk-@{buttonType}s--conditional" data-module="govuk-@if(buttonType == "radio") {@{buttonType}s} else {@{buttonType}es}">
         @inline_error_map(fieldValue, validationResult)
 
           @optionsSelectionsAndHiddenFields.zipWithIndex.toList.map { case ((option, isSelected, hiddenFields), index) =>
 	    @defining(fieldValue.id.appendIndex(index)) { fcId =>
-              <div class="multiple-choice"
+              <div class="govuk-@if(buttonType == "radio") {@{buttonType}s__item} else {@{buttonType}es__item}"
                    @if(hiddenFields.nonEmpty) {
                      data-target="fields-@fcId"
                    }>
@@ -70,19 +70,21 @@ formLevelHeading: Boolean
                          name="@{fieldValue.id}"
                          value="@index"
                          type="@buttonType"
+                         class="govuk-@if(buttonType == "radio") {@{buttonType}s} else {@{buttonType}es}__input"
 			 @{if(isSelected(index)) "checked" else ""}
                   />
 
-                  <label for="@fcId">
+                  <label class="govuk-label govuk-@if(buttonType == "radio") {@{buttonType}s} else {@{buttonType}es}__label" for="@fcId">
                     @option.value
                   </label>
               </div>
               <div id="fields-@fcId"
-                   class="panel panel-indent js-hidden"
+                   class="govuk-@if(buttonType == "radio") {@{buttonType}s} else {@{buttonType}es}__conditional js-hidden"
                    aria-hidden="true">
                   @hiddenFields
               </div>
-            }
+        </div>   }
 	  }
       </fieldset>
+
 </div>

@@ -53,9 +53,9 @@
 
 @backLink = {
   @if(isDeclaration) {
-    <a href="@uk.gov.hmrc.gform.gform.routes.SummaryController.summaryById(formTemplate._id,page.maybeAccessCode)" class="link-back">@messages("linkText.back")</a>
+    <a href="@uk.gov.hmrc.gform.gform.routes.SummaryController.summaryById(formTemplate._id,page.maybeAccessCode)" class="govuk-back-link">@messages("linkText.back")</a>
   } else {
-    <a href="#" class="link-back js-visible" id="backButton">@messages("linkText.back")</a>
+    <a href="#" class="govuk-back-link js-visible" id="backButton">@messages("linkText.back")</a>
   }
 }
 
@@ -81,7 +81,7 @@
     }
 
     @if(shouldDisplayHeading) {
-      <h1 class="h1-heading form-title">
+      <h1 class="govuk-heading-l  form-title">
         @heading
       </h1>
       @if(page.sectionDescription.exists(_.trim.nonEmpty)){
@@ -100,7 +100,7 @@
 
       @if(shouldDisplayContinue) {
         <div class="form-group">
-            <button type="submit" class="button" value="Continue">@{buttonLabel}</button>
+            <button type="submit" class="govuk-button" value="Continue">@{buttonLabel}</button>
         </div>
       }
       <div class="js-visible">

@@ -25,6 +25,7 @@ lazy val microservice = (project in file("."))
     scalafmtOnCompile := true,
     scalaVersion := "2.11.12",
     libraryDependencies ++= appDependencies,
+    libraryDependencies += "uk.gov.hmrc" %% "play-frontend-govuk" % "x.y.z-play-26",
     evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
     routesImport ++= Seq(
       "uk.gov.hmrc.gform.binders.ValueClassBinder._",
