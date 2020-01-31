@@ -34,6 +34,12 @@ case class FormDataRecalculated(invisible: Set[GraphNode], recData: RecData) {
       case SimpleGN(_)               => false
       case IncludeIfGN(_, includeIf) => section.includeIf.exists(_ === includeIf)
     }
+
+  /* def isVisibleFormModel(section: FormModel[DataDriven]): Boolean =
+ *   !invisible.exists {
+ *     case SimpleGN(_)               => false
+ *     case IncludeIfGN(_, includeIf) => section.includeIf.exists(_ === includeIf)
+ *   } */
 }
 
 object FormDataRecalculated {

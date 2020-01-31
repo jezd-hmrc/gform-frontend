@@ -39,14 +39,7 @@ case class ExpandedSection(expandedFormComponents: List[ExpandedFormComponent], 
 
 sealed trait TemporarySectionOpsForGforms364 extends BaseSection {
   def description: Option[SmartString]
-  def progressIndicator: Option[SmartString]
   def includeIf: Option[IncludeIf]
-  def repeatsMin: Option[TextExpression]
-  def repeatsMax: Option[TextExpression]
-  def validators: Option[Validator]
-  def continueLabel: Option[SmartString]
-  def continueIf: Option[ContinueIf]
-  def isRepeating: Boolean
 
   def expandSection(data: VariadicFormData): ExpandedSection =
     ExpandedSection(fields.map(_.expandFormComponent(data)), includeIf) // TODO expand sections
@@ -54,13 +47,44 @@ sealed trait TemporarySectionOpsForGforms364 extends BaseSection {
   def expandSectionRc(data: VariadicFormData): ExpandedSection =
     ExpandedSection(fields.map(_.expandFormComponentRc(data)), includeIf) // TODO expand sections
 
-  val jsFormComponentModels: List[JsFormComponentModel] = fields.flatMap(_.jsFormComponentModels)
 }
 
 sealed trait Section extends BaseSection with TemporarySectionOpsForGforms364 with Product with Serializable {
   def title: SmartString
-  def expandSectionFull(): ExpandedSection
+  def expandSectionFull(): List[ExpandedSection]
   def expandedFormComponents(): List[FormComponent]
+
+  def validators: Option[Validator] = this match {
+    case Section.NonRepeatingPage(page)         => page.validators
+    case Section.RepeatingPage(page, _)         => page.validators
+    case Section.AddToList(_, _, _, _, _, _, _) => None
+  }
+
+  def progressIndicator: Option[SmartString] = this match {
+    case Section.NonRepeatingPage(page)         => page.progressIndicator
+    case Section.RepeatingPage(page, _)         => page.progressIndicator
+    case Section.AddToList(_, _, _, _, _, _, _) => None
+  }
+
+  def continueLabel: Option[SmartString] = this match {
+    case Section.NonRepeatingPage(page)         => page.continueLabel
+    case Section.RepeatingPage(page, _)         => page.continueLabel
+    case Section.AddToList(_, _, _, _, _, _, _) => None
+  }
+
+  def isRepeating: Boolean = this match {
+    case Section.NonRepeatingPage(_)            => false
+    case Section.RepeatingPage(_, _)            => true
+    case Section.AddToList(_, _, _, _, _, _, _) => false
+  }
+
+  def isTerminationPage: Boolean = this match {
+    case Section.NonRepeatingPage(page)         => page.continueIf.contains(Stop)
+    case Section.RepeatingPage(page, _)         => page.continueIf.contains(Stop)
+    case Section.AddToList(_, _, _, _, _, _, _) => true
+  }
+
+  def jsFormComponentModels: List[JsFormComponentModel] = fields.flatMap(_.jsFormComponentModels)
 }
 
 object Section {
@@ -69,17 +93,10 @@ object Section {
     override def description: Option[SmartString] = page.description
     override def shortName: Option[SmartString] = page.shortName
     override def fields: List[FormComponent] = page.fields
-    override def progressIndicator: Option[SmartString] = page.progressIndicator
     override def includeIf: Option[IncludeIf] = page.includeIf
-    override def repeatsMin: Option[TextExpression] = None
-    override def repeatsMax: Option[TextExpression] = None
-    override def validators: Option[Validator] = page.validators
-    override def continueLabel: Option[SmartString] = page.continueLabel
-    override def continueIf: Option[ContinueIf] = page.continueIf
-    override def isRepeating: Boolean = false
 
-    override def expandSectionFull(): ExpandedSection =
-      ExpandedSection(page.fields.map(_.expandFormComponentFull), page.includeIf)
+    override def expandSectionFull(): List[ExpandedSection] =
+      ExpandedSection(page.fields.map(_.expandFormComponentFull), page.includeIf) :: Nil
     override def expandedFormComponents(): List[FormComponent] = page.expandedFormComponents
   }
 
@@ -88,39 +105,27 @@ object Section {
     override def description: Option[SmartString] = page.description
     override def shortName: Option[SmartString] = page.shortName
     override def fields: List[FormComponent] = page.fields
-    override def progressIndicator: Option[SmartString] = page.progressIndicator
     override def includeIf: Option[IncludeIf] = page.includeIf
-    override def repeatsMin: Option[TextExpression] = Some(repeats)
-    override def repeatsMax: Option[TextExpression] = Some(repeats)
-    override def validators: Option[Validator] = page.validators
-    override def continueLabel: Option[SmartString] = page.continueLabel
-    override def continueIf: Option[ContinueIf] = page.continueIf
-    override def isRepeating: Boolean = true
 
-    override def expandSectionFull(): ExpandedSection =
-      ExpandedSection(page.fields.map(_.expandFormComponentFull), page.includeIf) // TODO expand repeats
+    override def expandSectionFull(): List[ExpandedSection] =
+      ExpandedSection(page.fields.map(_.expandFormComponentFull), page.includeIf) :: Nil // TODO expand repeats
     override def expandedFormComponents(): List[FormComponent] = page.expandedFormComponents
   }
 
   case class AddToList(
+    id: AddToListId,
     title: SmartString,
     description: Option[SmartString],
     shortName: Option[SmartString],
     includeIf: Option[IncludeIf],
     repeatsMax: Option[TextExpression],
-    pages: NonEmptyList[Page])
-      extends Section {
+    pages: NonEmptyList[Page]
+  ) extends Section {
 
     // ToDo Lance - Some of these need to be implemented and some need to be removed
-    override def expandSectionFull(): ExpandedSection = ???
-    override def fields: List[FormComponent] = ???
-
-    override def progressIndicator: Option[SmartString] = ???
-    override def repeatsMin: Option[TextExpression] = ???
-    override def validators: Option[Validator] = ???
-    override def continueLabel: Option[SmartString] = ???
-    override def continueIf: Option[ContinueIf] = ???
-    override def isRepeating: Boolean = ???
+    override def expandSectionFull(): List[ExpandedSection] =
+      pages.toList.map(page => ExpandedSection(page.fields.map(_.expandFormComponentFull), page.includeIf))
+    override def fields: List[FormComponent] = pages.toList.flatMap(_.expandedFormComponents)
 
     override lazy val expandedFormComponents: List[FormComponent] = pages.toList.flatMap(_.expandedFormComponents)
   }

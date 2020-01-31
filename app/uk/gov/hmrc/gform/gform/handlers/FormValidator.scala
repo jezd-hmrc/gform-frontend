@@ -111,10 +111,15 @@ class FormValidator(implicit ec: ExecutionContext) {
     implicit hc: HeaderCarrier
   ): Future[Option[SectionNumber]] = {
 
-    val sections = processData.sections
+    val sections: List[Section] = processData.sections
     val data = processData.data
 
-    Origin(sections, data).availableSectionNumbers.foldLeft(Future.successful(None: Option[SectionNumber])) {
+    val availableSectionNumbers: List[SectionNumber] = Origin(sections, data).availableSectionNumbers
+    println("sections: ")
+    sections.foreach(println)
+    println("data: " + data)
+    println("availableSectionNumbers: " + (availableSectionNumbers))
+    availableSectionNumbers.foldLeft(Future.successful(None: Option[SectionNumber])) {
       case (accF, currentSn) =>
         accF.flatMap {
           case Some(sn) => Future.successful(Some(sn))
@@ -133,7 +138,7 @@ class FormValidator(implicit ec: ExecutionContext) {
                   val section = sections(currentSn.value)
                   val hasBeenVisited = processData.visitsIndex.contains(currentSn.value)
 
-                  val stop = section.continueIf.contains(Stop) || !hasBeenVisited
+                  val stop = section.isTerminationPage || !hasBeenVisited
                   if (isValid && !stop) None else Some(currentSn)
               }
         }

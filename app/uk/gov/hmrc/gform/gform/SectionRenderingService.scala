@@ -166,7 +166,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
       renderingInfo,
       shouldDisplayBack = sectionNumber > originSection,
       shouldDisplayHeading = formLevelHeading,
-      shouldDisplayContinue = !section.continueIf.contains(Stop),
+      shouldDisplayContinue = !section.isTerminationPage,
       frontendAppConfig,
       isDeclaration = false
     )

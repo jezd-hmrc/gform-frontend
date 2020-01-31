@@ -68,7 +68,7 @@ case class FormTemplate(
   def expandFormTemplate(data: VariadicFormData): ExpandedFormTemplate =
     ExpandedFormTemplate(sections.map(_.expandSection(data)))
 
-  val expandFormTemplateFull: ExpandedFormTemplate = ExpandedFormTemplate(sections.map(_.expandSectionFull))
+  val expandFormTemplateFull: ExpandedFormTemplate = ExpandedFormTemplate(sections.flatMap(_.expandSectionFull))
 }
 
 object FormTemplate {

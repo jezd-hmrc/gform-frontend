@@ -28,45 +28,45 @@ object VisibleFieldCalculator {
     template: FormTemplate,
     data: FormData,
     formDataRecalculated: FormDataRecalculated,
-    envelope: Envelope): (Seq[FormField], Attachments) = {
-    val allSections = RepeatingComponentService.getAllSections(template, formDataRecalculated)
-    val visibleSections = allSections.filter(formDataRecalculated.isVisible)
-    val formComponentsInVisibleSections = {
-      val acknowledgementSectionFields = template.destinations match {
-        case destinationList: DestinationList => destinationList.acknowledgementSection.fields
-        case _                                => Nil
-      }
-
-      visibleSections.flatMap(_.expandSectionRc(formDataRecalculated.data).allFCs) :::
-        template.declarationSection.fields :::
-        acknowledgementSectionFields
-    }
-
-    val visibleFormComponents: List[FormComponent] = submittedFCs(
-      formDataRecalculated,
-      formComponentsInVisibleSections
-    )
-
-    val wvfu = new WithVisibleFileUploads(envelope)
-
-    val visibleFileUploads = visibleFormComponents.collect {
-      case IsGroup(wvfu.WithVisibleFileUploads(fileUploads)) => fileUploads
-      case fc @ IsFileUpload() if envelope.contains(fc.id)   => List(fc.id)
-    }
-
-    val visibleFormComponentIds: Set[FormComponentId] = visibleFormComponents.flatMap { component =>
-      component match {
-        case fc @ IsMultiField(mf) => component.id :: mf.fields(fc.id).toList
-        case _                     => List(component.id)
-      }
-    }.toSet
-
-    val visibleFields = data.fields.filter { field =>
-      visibleFormComponentIds(field.id)
-    }
-
-    (visibleFields, Attachments(visibleFileUploads.flatten))
-  }
+    envelope: Envelope): (Seq[FormField], Attachments) =
+    /* val formModel = RepeatingComponentService.formModel(template, formDataRecalculated)
+     * val visibleSections = formModel.filter(formDataRecalculated.isVisible)
+     * val formComponentsInVisibleSections = {
+     *   val acknowledgementSectionFields = template.destinations match {
+     *     case destinationList: DestinationList => destinationList.acknowledgementSection.fields
+     *     case _                                => Nil
+     *   }
+     *
+     *   visibleSections.flatMap(_.expandSectionRc(formDataRecalculated.data).allFCs) :::
+     *     template.declarationSection.fields :::
+     *     acknowledgementSectionFields
+     * }
+     *
+     * val visibleFormComponents: List[FormComponent] = submittedFCs(
+     *   formDataRecalculated,
+     *   formComponentsInVisibleSections
+     * )
+     *
+     * val wvfu = new WithVisibleFileUploads(envelope)
+     *
+     * val visibleFileUploads = visibleFormComponents.collect {
+     *   case IsGroup(wvfu.WithVisibleFileUploads(fileUploads)) => fileUploads
+     *   case fc @ IsFileUpload() if envelope.contains(fc.id)   => List(fc.id)
+     * }
+     *
+     * val visibleFormComponentIds: Set[FormComponentId] = visibleFormComponents.flatMap { component =>
+     *   component match {
+     *     case fc @ IsMultiField(mf) => component.id :: mf.fields(fc.id).toList
+     *     case _                     => List(component.id)
+     *   }
+     * }.toSet
+     *
+     * val visibleFields = data.fields.filter { field =>
+     *   visibleFormComponentIds(field.id)
+     * }
+     *
+     * (visibleFields, Attachments(visibleFileUploads.flatten)) */
+    (???, ???)
 }
 
 private class WithVisibleFileUploads(envelope: Envelope) {

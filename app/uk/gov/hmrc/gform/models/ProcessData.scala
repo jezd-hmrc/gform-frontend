@@ -43,15 +43,17 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
 
   def updateSectionVisits(
     dataRaw: VariadicFormData,
-    sections: List[Section],
-    mongoSections: List[Section],
+    sections: FormModel[DataDriven],
+    mongoSections: FormModel[DataDriven],
     visitsIndex: VisitIndex): Set[Int] =
     visitsIndex.visitsIndex
       .map { index =>
         Try(mongoSections(index)).toOption.fold(-1) { section =>
-          val firstComponentId = section.fields.head.id
-          sections.indexWhere { s =>
-            s.fields.head.id === firstComponentId
+          section.fields.headOption.fold(-1) { mongoHead =>
+            val firstComponentId = mongoHead.id
+            sections.indexWhere { s =>
+              s.fields.headOption.fold(false)(_.id === firstComponentId)
+            }
           }
         }
       }
@@ -79,8 +81,8 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
     for {
       browserRecalculated <- recalculateDataAndSections(dataRaw, cache)
       mongoRecalculated   <- recalculateDataAndSections(cache.variadicFormData, cache)
-      (data, sections) = browserRecalculated
-      (oldData, mongoSections) = mongoRecalculated
+      (data, formModel) = browserRecalculated
+      (oldData, mongoFormModel) = mongoRecalculated
       obligations <- new TaxPeriodStateChecker[F]().callDesIfNeeded(
                       getAllTaxPeriods,
                       hmrcTaxPeriodWithId(data.recData),
@@ -98,15 +100,15 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
         obligations,
         FormDataRecalculated.clearTaxResponses)
 
-      val newVisitIndex = updateSectionVisits(dataRaw, sections, mongoSections, cache.form.visitsIndex)
+      val newVisitIndex = updateSectionVisits(dataRaw, formModel, mongoFormModel, cache.form.visitsIndex)
 
-      ProcessData(dataUpd, sections, VisitIndex(newVisitIndex), obligations)
+      ProcessData(dataUpd, formModel, VisitIndex(newVisitIndex), obligations)
     }
 
   def recalculateDataAndSections(data: VariadicFormData, cache: AuthCacheWithForm)(
     implicit hc: HeaderCarrier,
     me: MonadError[F, E]
-  ): F[(FormDataRecalculated, List[Section])] =
+  ): F[(FormDataRecalculated, FormModel[DataDriven])] =
     for {
       formDataRecalculated <- recalculation
                                .recalculateFormData(
@@ -116,8 +118,8 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
                                  cache.form.thirdPartyData,
                                  cache.form.envelopeId)
     } yield {
-      val sections = RepeatingComponentService.getAllSections(cache.formTemplate, formDataRecalculated)
-      (formDataRecalculated, sections)
+      val formModel = RepeatingComponentService.formModel(cache.formTemplate, formDataRecalculated)
+      (formDataRecalculated, formModel)
     }
 
 }

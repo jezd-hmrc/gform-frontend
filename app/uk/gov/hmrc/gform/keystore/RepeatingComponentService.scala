@@ -18,6 +18,7 @@ package uk.gov.hmrc.gform.keystore
 
 import uk.gov.hmrc.gform.commons.BigDecimalUtil.toBigDecimalDefault
 import uk.gov.hmrc.gform.gform.FormComponentUpdater
+import uk.gov.hmrc.gform.models.{ DataDriven, FormModel, Repeater, Singleton }
 import uk.gov.hmrc.gform.models.ExpandUtils._
 import uk.gov.hmrc.gform.models.javascript.RepeatFormComponentIds
 import uk.gov.hmrc.gform.sharedmodel.{ SmartString, VariadicFormData }
@@ -37,13 +38,17 @@ object RepeatingComponentService {
     fcIds.map(id => data.data.one(id).fold(0: BigDecimal)(toBigDecimalDefault)).sum
   }
 
-  def getAllSections(formTemplate: FormTemplate, data: FormDataRecalculated): List[Section] =
-    formTemplate.sections
-      .flatMap {
-        case s: Section.NonRepeatingPage => List(s)
-        case s: Section.RepeatingPage    => generateDynamicSections(s, formTemplate, data)
-        case s: Section.AddToList        => ???
-      }
+  def formModel(formTemplate: FormTemplate, data: FormDataRecalculated): FormModel[DataDriven] =
+    FormModel {
+      formTemplate.sections
+        .flatMap {
+          case s: Section.NonRepeatingPage => List(Singleton(s.page))
+          case s: Section.RepeatingPage    => generateDynamicSections(s, formTemplate, data)
+          case s: Section.AddToList =>
+            s.pages.map(Singleton.apply).toList ++ List(Repeater(List.empty[String], s.title, s.shortName))
+
+        }
+    }
 
   def reduceToTemplateFieldId(fieldId: FormComponentId): FormComponentId = {
     val repeatingGroupFieldId = """^\d+_(.+)""".r
@@ -57,9 +62,9 @@ object RepeatingComponentService {
   private def generateDynamicSections(
     section: Section.RepeatingPage,
     formTemplate: FormTemplate,
-    data: FormDataRecalculated): List[Section] = {
+    data: FormDataRecalculated): List[Singleton] = {
 
-    val count = getRequestedCount(section.repeatsMax.get, formTemplate, data)
+    val count = getRequestedCount(section.repeats, formTemplate, data)
 
     (1 to count).map { i =>
       copySection(section, i, data)
@@ -67,7 +72,7 @@ object RepeatingComponentService {
 
   }
 
-  private def copySection(section: Section.RepeatingPage, index: Int, data: FormDataRecalculated) = {
+  private def copySection(section: Section.RepeatingPage, index: Int, data: FormDataRecalculated): Singleton = {
     def copyField(field: FormComponent): FormComponent = {
       val tpe = field.`type` match {
         case rc: RevealingChoice =>
@@ -87,12 +92,13 @@ object RepeatingComponentService {
       ).updated
     }
 
-    section.copy(
-      page = section.page.copy(
+    Singleton(
+      section.page.copy(
         title = buildText(section.title, index, data),
         shortName = optBuildText(section.shortName, index, data),
-        fields = section.fields.map(copyField))
-    )
+        fields = section.fields.map(copyField)
+      ))
+
   }
 
   private def optBuildText(maybeLs: Option[SmartString], index: Int, data: FormDataRecalculated): Option[SmartString] =
@@ -194,6 +200,6 @@ object RepeatingComponentService {
   }
 
   def atomicFieldsFull(section: Section): List[FormComponent] =
-    section.expandSectionFull.expandedFormComponents.flatMap(_.formComponents)
+    section.expandSectionFull.flatMap(_.expandedFormComponents.flatMap(_.formComponents))
 
 }
