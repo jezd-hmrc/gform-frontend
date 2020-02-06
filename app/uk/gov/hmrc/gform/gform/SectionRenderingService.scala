@@ -141,17 +141,8 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     val pageLevelErrorHtml = generatePageLevelErrorHtml(listResult, List.empty)
 
     val originSection = Origin(formTemplate.sections, fieldData).minSectionNumber
-    val snippetsForFields = section.fields.map(
-      formComponent =>
-        htmlFor(
-          formComponent,
-          formTemplate._id,
-          0,
-          ei,
-          fieldData,
-          validatedType,
-          formComponent.onlyShowOnSummary,
-          obligations))
+    val snippetsForFields = section.fields.map(formComponent =>
+      htmlFor(formComponent, formTemplate._id, 0, ei, validatedType, formComponent.onlyShowOnSummary, obligations))
     val renderingInfo = SectionRenderingInformation(
       formTemplate._id,
       maybeAccessCode,
@@ -269,7 +260,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     val listResult = errors.map { case (_, validationResult) => validationResult }
 
     val snippets = formTemplate.declarationSection.fields.map(formComponent =>
-      htmlFor(formComponent, formTemplate._id, 0, ei, fieldData, validatedType, obligations = NotChecked))
+      htmlFor(formComponent, formTemplate._id, 0, ei, validatedType, obligations = NotChecked))
     val pageLevelErrorHtml = generatePageLevelErrorHtml(listResult, List.empty)
     val renderingInfo = SectionRenderingInformation(
       formTemplate._id,
@@ -358,7 +349,6 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
                          formTemplate._id,
                          0,
                          ei,
-                         FormDataRecalculated.empty,
                          ValidationResult.empty.valid,
                          obligations = NotChecked)))
       renderingInfo = SectionRenderingInformation(
@@ -415,7 +405,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     val listResult = errors.map { case (_, validationResult) => validationResult }
     val snippets =
       enrolmentSection.fields.map(formComponent =>
-        htmlFor(formComponent, formTemplate._id, 0, ei, fieldData, validatedType, obligations = NotChecked))
+        htmlFor(formComponent, formTemplate._id, 0, ei, validatedType, obligations = NotChecked))
     val pageLevelErrorHtml = generatePageLevelErrorHtml(listResult, globalErrors)
     val renderingInfo = SectionRenderingInformation(
       formTemplate._id,
@@ -442,7 +432,6 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     formTemplateId: FormTemplateId,
     index: Int,
     ei: ExtraInfo,
-    data: FormDataRecalculated,
     maybeValidated: ValidatedType[ValidationResult],
     isHidden: Boolean = false,
     obligations: Obligations)(
@@ -452,18 +441,18 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     sse: SmartStringEvaluator): Html =
     formComponent.`type` match {
       case sortCode @ UkSortCode(expr) =>
-        htmlForSortCode(formComponent, sortCode, expr, formComponent.id, index, maybeValidated, ei, data, isHidden)
+        htmlForSortCode(formComponent, sortCode, expr, formComponent.id, index, maybeValidated, ei, isHidden)
       case g @ Group(_, _, _, _, _, _) =>
-        htmlForGroup(g, formTemplateId, formComponent, index, ei, data, maybeValidated, obligations)
+        htmlForGroup(g, formTemplateId, formComponent, index, ei, maybeValidated, obligations)
       case Date(_, offset, dateValue) =>
-        htmlForDate(formComponent, offset, dateValue, index, maybeValidated, ei, data, isHidden)
-      case Address(international) => htmlForAddress(formComponent, international, index, maybeValidated, ei, data)
+        htmlForDate(formComponent, offset, dateValue, index, maybeValidated, ei, isHidden)
+      case Address(international) => htmlForAddress(formComponent, international, index, maybeValidated, ei)
       case Text(Lookup(register), _, _, _) =>
-        renderLookup(formComponent, register, index, maybeValidated, ei, data, isHidden)
+        renderLookup(formComponent, register, index, maybeValidated, ei, isHidden)
       case t @ Text(_, _, _, _) =>
-        renderText(messages, l, sse)(t, formComponent, index, maybeValidated, ei, data, isHidden)
+        renderText(messages, l, sse)(t, formComponent, index, maybeValidated, ei, isHidden)
       case t @ TextArea(_, _, _) =>
-        renderTextArea(messages, l, sse)(t, formComponent, index, maybeValidated, ei, data, isHidden)
+        renderTextArea(messages, l, sse)(t, formComponent, index, maybeValidated, ei, isHidden)
       case Choice(choice, options, orientation, selections, optionalHelpText) =>
         htmlForChoice(
           formComponent,
@@ -474,8 +463,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
           optionalHelpText,
           index,
           maybeValidated,
-          ei,
-          data)
+          ei)
       case RevealingChoice(options, multiValue) =>
         htmlForRevealingChoice(
           formComponent,
@@ -485,14 +473,13 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
           index,
           maybeValidated,
           ei,
-          data,
           obligations)
       case FileUpload() =>
-        htmlForFileUpload(formComponent, formTemplateId, index, ei, data, ei.retrievals, maybeValidated)
+        htmlForFileUpload(formComponent, formTemplateId, index, ei, ei.retrievals, maybeValidated)
       case InformationMessage(infoType, infoText) =>
         htmlForInformationMessage(formComponent, infoType, infoText, index, ei)
       case htp @ HmrcTaxPeriod(idType, idNumber, regimeType) =>
-        htmlForHmrcTaxPeriod(formComponent, index, ei, maybeValidated, data, obligations, htp)
+        htmlForHmrcTaxPeriod(formComponent, index, ei, maybeValidated, obligations, htp)
     }
 
   private def htmlForHmrcTaxPeriod(
@@ -500,7 +487,6 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     index: Int,
     ei: ExtraInfo,
     validatedType: ValidatedType[ValidationResult],
-    data: FormDataRecalculated,
     obligations: Obligations,
     hmrcTP: HmrcTaxPeriod)(implicit messages: Messages, l: LangADT, sse: SmartStringEvaluator) = {
 
@@ -514,7 +500,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
       case _ => List.empty[OptionParams]
     }
 
-    val validatedValue = buildFormFieldValidationResult(formComponent, ei, validatedType, data)
+    val validatedValue = buildFormFieldValidationResult(formComponent, ei, validatedType)
 
     val setValue = TaxPeriodHelper.formatTaxPeriodOutput(validatedValue)
 
@@ -537,13 +523,12 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     formTemplateId: FormTemplateId,
     index: Int,
     ei: ExtraInfo,
-    data: FormDataRecalculated,
     materialisedRetrievals: MaterialisedRetrievals,
     validatedType: ValidatedType[ValidationResult])(
     implicit messages: Messages,
     l: LangADT,
     sse: SmartStringEvaluator) = {
-    val validationResult = buildFormFieldValidationResult(formComponent, ei, validatedType, data)
+    val validationResult = buildFormFieldValidationResult(formComponent, ei, validatedType)
 
     html.form.snippets.field_template_file_upload(
       FormId(materialisedRetrievals, formTemplateId, ei.maybeAccessCode),
@@ -566,8 +551,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     optionalHelpText: Option[NonEmptyList[SmartString]],
     index: Int,
     validatedType: ValidatedType[ValidationResult],
-    ei: ExtraInfo,
-    data: FormDataRecalculated)(implicit messages: Messages, l: LangADT, sse: SmartStringEvaluator) = {
+    ei: ExtraInfo)(implicit messages: Messages, l: LangADT, sse: SmartStringEvaluator) = {
 
     val prepopValues =
       if (ei.fieldData.data.contains(formComponent.id)) Set.empty[String] // Don't prepop something we already submitted
@@ -578,7 +562,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
         helpTexts.map(ht => markDownParser(ht))
       }
 
-    val validatedValue = buildFormFieldValidationResult(formComponent, ei, validatedType, data)
+    val validatedValue = buildFormFieldValidationResult(formComponent, ei, validatedType)
     choice match {
       case Radio | YesNo =>
         html.form.snippets.choice(
@@ -626,13 +610,12 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     index: Int,
     validatedType: ValidatedType[ValidationResult],
     extraInfo: ExtraInfo,
-    data: FormDataRecalculated,
     obligations: Obligations)(
     implicit request: RequestHeader,
     message: Messages,
     l: LangADT,
     sse: SmartStringEvaluator) = {
-    val validatedValue = buildFormFieldValidationResult(fieldValue, extraInfo, validatedType, data)
+    val validatedValue = buildFormFieldValidationResult(fieldValue, extraInfo, validatedType)
     val nestedEi = extraInfo.copy(formLevelHeading = true)
     val revealingChoicesList =
       options.map { o =>
@@ -644,8 +627,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
         (
           o.choice,
           isSelected,
-          o.revealingFields.map(
-            htmlFor(_, formTemplateId, index, nestedEi, data, validatedType, obligations = obligations)))
+          o.revealingFields.map(htmlFor(_, formTemplateId, index, nestedEi, validatedType, obligations = obligations)))
       }
 
     html.form.snippets
@@ -666,12 +648,11 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     index: Int,
     validatedType: ValidatedType[ValidationResult],
     ei: ExtraInfo,
-    data: FormDataRecalculated,
     isHidden: Boolean
   )(implicit l: LangADT, sse: SmartStringEvaluator): Html = {
 
     val prepopValue = ei.fieldData.data.one(fieldValue.id)
-    val validatedValue = buildFormFieldValidationResult(fieldValue, ei, validatedType, data)
+    val validatedValue = buildFormFieldValidationResult(fieldValue, ei, validatedType)
     if (isHidden)
       html.form.snippets
         .hidden_field_populated(List(FormRender(fieldValue.id.value, fieldValue.id.value, prepopValue.getOrElse(""))))
@@ -725,11 +706,10 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     index: Int,
     validatedType: ValidatedType[ValidationResult],
     ei: ExtraInfo,
-    data: FormDataRecalculated,
     isHidden: Boolean
   )(implicit messages: Messages, l: LangADT, sse: SmartStringEvaluator) = {
     val prepopValue = ei.fieldData.data.one(formComponent.id)
-    val validatedValue = buildFormFieldValidationResult(formComponent, ei, validatedType, data)
+    val validatedValue = buildFormFieldValidationResult(formComponent, ei, validatedType)
     if (isHidden)
       html.form.snippets
         .hidden_field_populated(
@@ -759,10 +739,9 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     index: Int,
     validatedType: ValidatedType[ValidationResult],
     ei: ExtraInfo,
-    data: FormDataRecalculated,
     isHidden: Boolean)(implicit messages: Messages, l: LangADT, sse: SmartStringEvaluator) = {
     val prepopValue = ei.fieldData.data.oneOrElse(formComponent.id, "")
-    val validatedValue = buildFormFieldValidationResult(formComponent, ei, validatedType, data)
+    val validatedValue = buildFormFieldValidationResult(formComponent, ei, validatedType)
     if (isHidden)
       html.form.snippets
         .hidden_field_populated(List(FormRender(formComponent.id.value, formComponent.id.value, prepopValue)))
@@ -777,9 +756,14 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     international: Boolean,
     index: Int,
     validatedType: ValidatedType[ValidationResult],
-    ei: ExtraInfo,
-    data: FormDataRecalculated)(implicit messages: Messages, l: LangADT, sse: SmartStringEvaluator) = {
-    val fieldValues = buildFormFieldValidationResult(formComponent, ei, validatedType, data)
+    ei: ExtraInfo
+  )(
+    implicit
+    messages: Messages,
+    l: LangADT,
+    sse: SmartStringEvaluator
+  ) = {
+    val fieldValues = buildFormFieldValidationResult(formComponent, ei, validatedType)
     html.form.snippets
       .field_template_address(
         international,
@@ -797,7 +781,6 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     index: Int,
     validatedType: ValidatedType[ValidationResult],
     ei: ExtraInfo,
-    data: FormDataRecalculated,
     isHidden: Boolean = false)(implicit messages: Messages, l: LangADT, sse: SmartStringEvaluator) = {
     val prepopValues: Option[DateExpr] = dateValue.map(DateExpr.fromDateValue).map(DateExpr.withOffset(offset, _))
 
@@ -819,7 +802,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
         )
       )
     } else {
-      val fieldValues = buildFormFieldValidationResult(formComponent, ei, validatedType, data)
+      val fieldValues = buildFormFieldValidationResult(formComponent, ei, validatedType)
       html.form.snippets.field_template_date(formComponent, fieldValues, prepopValues, index, ei.formLevelHeading)
     }
   }
@@ -830,14 +813,13 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     formComponent: FormComponent,
     index: Int,
     ei: ExtraInfo,
-    data: FormDataRecalculated,
     validatedType: ValidatedType[ValidationResult],
     obligations: Obligations)(
     implicit request: RequestHeader,
     messages: Messages,
     l: LangADT,
     sse: SmartStringEvaluator): Html = {
-    val grpHtml = htmlForGroup0(grp, formTemplateId, formComponent, index, ei, data, validatedType, obligations)
+    val grpHtml = htmlForGroup0(grp, formTemplateId, formComponent, index, ei, validatedType, obligations)
 
     val isChecked = FormDataHelpers
       .dataEnteredInGroup(grp, ei.fieldData.data)
@@ -855,7 +837,6 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     formComponent: FormComponent,
     index: Int,
     ei: ExtraInfo,
-    data: FormDataRecalculated,
     validatedType: ValidatedType[ValidationResult],
     obligations: Obligations)(
     implicit request: RequestHeader,
@@ -873,7 +854,6 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
         groupField.orientation,
         validatedType,
         ei,
-        data,
         obligations)
 
     html.form.snippets.group(formComponent, maybeHint, groupField, lhtml, groupField.orientation, limitReached, index)
@@ -903,7 +883,6 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     orientation: Orientation,
     validatedType: ValidatedType[ValidationResult],
     ei: ExtraInfo,
-    data: FormDataRecalculated,
     obligations: Obligations)(
     implicit request: RequestHeader,
     messages: Messages,
@@ -916,7 +895,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
         .map {
           case (gl, count) =>
             val lhtml = gl.componentList
-              .map(fv => htmlFor(fv, formTemplateId, count + 1, ei, data, validatedType, obligations = obligations))
+              .map(fv => htmlFor(fv, formTemplateId, count + 1, ei, validatedType, obligations = obligations))
 
             val showButton = {
               groupField.repeatsMax.getOrElse(0) == groupField.repeatsMin.getOrElse(0) ||
@@ -929,24 +908,23 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
       (htmls, isLimit)
     } else {
       val htmls =
-        groupField.fields.map(fv => htmlFor(fv, formTemplateId, 0, ei, data, validatedType, obligations = obligations))
+        groupField.fields.map(fv => htmlFor(fv, formTemplateId, 0, ei, validatedType, obligations = obligations))
       (htmls, true)
     }
 
   private def buildFormFieldValidationResult(
     formComponent: FormComponent,
     ei: ExtraInfo,
-    validatedType: ValidatedType[ValidationResult],
-    data: FormDataRecalculated): Option[FormFieldValidationResult] = {
+    validatedType: ValidatedType[ValidationResult]
+  ): Option[FormFieldValidationResult] = {
     // TODO: Simplify building this result. When this method is called we already know what component we are dealing with
     // TODO: it is possible to get inner fields (if any) and build the result.
     val gformErrors: Map[FormComponentId, Set[String]] = validatedType match {
       case Invalid(errors) => errors
       case Valid(_)        => Map.empty[FormComponentId, Set[String]]
     }
-    val section: BaseSection = ei.dynamicSections(ei.sectionNumber.value)
 
-    val fieldValues: List[FormComponent] = RepeatingComponentService.atomicFields(section, data.data)
+    val fieldValues: List[FormComponent] = RepeatingComponentService.atomicFields(ei.section, ei.fieldData.data)
 
     Fields.getValidationResult(ei.fieldData, fieldValues, ei.envelope, gformErrors)(formComponent)
   }
