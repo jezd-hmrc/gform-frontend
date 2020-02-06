@@ -28,7 +28,7 @@ import uk.gov.hmrc.gform.sharedmodel.form.FormStatus
 import uk.gov.hmrc.gform.sharedmodel.notifier.{ NotifierPersonalisationFieldId, NotifierTemplateId }
 
 sealed trait DestinationWithCustomerId {
-  def customerId(): TextExpression
+  def customerId(): Expr
 }
 
 sealed trait Destination extends Product with Serializable {
@@ -41,7 +41,7 @@ object Destination {
   case class HmrcDms(
     id: DestinationId,
     dmsFormId: String,
-    customerId: TextExpression,
+    customerId: Expr,
     classificationType: String,
     businessArea: String,
     includeIf: String,
@@ -115,7 +115,7 @@ object Destination {
 case class UploadableHmrcDmsDestination(
   id: DestinationId,
   dmsFormId: String,
-  customerId: TextExpression,
+  customerId: Expr,
   classificationType: String,
   businessArea: String,
   convertSingleQuotes: Option[Boolean],

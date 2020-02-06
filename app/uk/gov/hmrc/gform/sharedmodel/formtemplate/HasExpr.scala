@@ -16,23 +16,33 @@
 
 package uk.gov.hmrc.gform.sharedmodel.formtemplate
 
+import scala.util.Try
+import uk.gov.hmrc.gform.commons.BigDecimalUtil
 import uk.gov.hmrc.gform.models.javascript.{ FormComponentSimple, FormComponentWithCtx, FormComponentWithGroup }
 
 sealed trait ExprCardinality
 case class SingleExpr(expr: Expr) extends ExprCardinality
-case class MultipleExpr(fields: List[FormComponent]) extends ExprCardinality
+//case class MultipleExpr(exprs: List[Expr]) extends ExprCardinality
 
 object HasExpr {
   def unapply(fc: FormComponent): Option[ExprCardinality] = unapply(fc.`type`)
 
   def unapply(ct: ComponentType): Option[ExprCardinality] =
     ct match {
-      case Text(_, expr, _, _)       => Some(SingleExpr(expr))
-      case TextArea(_, expr, _)      => Some(SingleExpr(expr))
-      case UkSortCode(expr)          => Some(SingleExpr(expr))
-      case HmrcTaxPeriod(_, expr, _) => Some(SingleExpr(expr))
-      case Group(fields, _, _, _, _) => Some(MultipleExpr(fields))
-      case _                         => None
+      case Text(_, NonValueExpr(expr), _, _)       => Some(SingleExpr(expr))
+      case TextArea(_, NonValueExpr(expr), _)      => Some(SingleExpr(expr))
+      case UkSortCode(NonValueExpr(expr))          => Some(SingleExpr(expr))
+      case HmrcTaxPeriod(_, NonValueExpr(expr), _) => Some(SingleExpr(expr))
+      //case Group(fields, _, _, _, _, _) => Some(MultipleExpr(fields))
+      case _ => None
+    }
+}
+
+private object NonValueExpr {
+  def unapply(expr: Expr): Option[Expr] =
+    expr match {
+      case Value => None
+      case _     => Some(expr)
     }
 }
 
@@ -40,5 +50,19 @@ object HasExprCtx {
   def unapply(fc: FormComponentWithCtx): Option[ExprCardinality] = fc match {
     case FormComponentWithGroup(fc, _) => HasExpr.unapply(fc.`type`)
     case FormComponentSimple(fc)       => HasExpr.unapply(fc.`type`)
+  }
+}
+
+object IsNumberConstant {
+  def unapply(expr: Expr): Option[BigDecimal] = expr match {
+    case Constant(c) => BigDecimalUtil.toBigDecimalSafe(c)
+    case _           => None
+  }
+}
+
+object IsWholeNumberConstant {
+  def unapply(expr: Expr): Option[Int] = expr match {
+    case Constant(c) => Try(c.toInt).toOption
+    case _           => None
   }
 }

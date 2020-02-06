@@ -29,10 +29,12 @@ import uk.gov.hmrc.gform.fileupload.Envelope
 import uk.gov.hmrc.gform.gform.{ EnrolmentFormNotValid, NoIdentifierProvided, SubmitEnrolmentError }
 import uk.gov.hmrc.gform.gform.RegimeIdNotMatch
 import uk.gov.hmrc.gform.models.helpers.Fields
+import uk.gov.hmrc.gform.models.ids.ModelComponentId
+import uk.gov.hmrc.gform.models.optics.{ DataOrigin, FormModelVisibilityOptics }
 import uk.gov.hmrc.gform.sharedmodel.LangADT
-import uk.gov.hmrc.gform.sharedmodel.form.{ FormDataRecalculated, ValidationResult }
+import uk.gov.hmrc.gform.sharedmodel.form.{ FormModelOptics, ValidatorsResult }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ EnrolmentSection, FormComponent, FormTemplate }
-import uk.gov.hmrc.gform.validation.{ FormFieldValidationResult, ValidationUtil }
+import uk.gov.hmrc.gform.validation.{ FormFieldValidationResult, ValidationResult, ValidationUtil }
 import uk.gov.hmrc.gform.validation.ValidationUtil.ValidatedType
 import uk.gov.hmrc.gform.views.html
 import uk.gov.hmrc.govukfrontend.views.viewmodels.content
@@ -43,36 +45,40 @@ class EnrolmentResultProcessor(
   formTemplate: FormTemplate,
   retrievals: MaterialisedRetrievals,
   enrolmentSection: EnrolmentSection,
-  data: FormDataRecalculated,
+  formModelVisibilityOptics: FormModelVisibilityOptics[DataOrigin.Mongo],
   frontendAppConfig: FrontendAppConfig
 ) {
 
   private def getErrorMap(
-    validationResult: ValidatedType[ValidationResult]
-  ): List[(FormComponent, FormFieldValidationResult)] = {
+    validatedType: ValidatedType[ValidatorsResult]
+  ): ValidationResult = {
     val enrolmentFields = Fields.flattenGroups(enrolmentSection.fields)
-    evaluateValidation(validationResult, enrolmentFields, data, Envelope.empty)
+    ValidationUtil
+      .evaluateValidationResult(enrolmentFields, validatedType, formModelVisibilityOptics, Envelope.empty)
   }
 
-  private def evaluateValidation(
-    v: ValidatedType[ValidationResult],
-    fields: List[FormComponent],
-    data: FormDataRecalculated,
-    envelope: Envelope): List[(FormComponent, FormFieldValidationResult)] =
-    // We need to keep the formComponent order as they appear on the form for page-level-error rendering, do not convert to map
-    ValidationUtil
-      .evaluateValidationResult(fields, v, data, envelope)
-      .map(ffvr => ffvr.fieldValue -> ffvr)
+  /* private def evaluateValidation(
+   *   v: ValidatedType[ValidatorsResult],
+   *   fields: List[FormComponent],
+   *   formModelVisibilityOptics: FormModelVisibilityOptics[DataOrigin.Mongo],
+   *   envelope: Envelope
+   * ): List[(FormComponent, FormFieldValidationResult)] =
+   *   // We need to keep the formComponent order as they appear on the form for page-level-error rendering, do not convert to map
+   *   ValidationUtil
+   *     .evaluateValidationResult(fields, v, formModelVisibilityOptics, envelope)
+   *     .map(ffvr => ffvr.fieldValue -> ffvr) */
 
-  private def getResult(validationResult: ValidatedType[ValidationResult], globalErrors: List[ErrorLink]): Result = {
+  private def getResult(validationResult: ValidatedType[ValidatorsResult], globalErrors: List[ErrorLink]): Result = {
     val errorMap = getErrorMap(validationResult)
+    val data: FormModelOptics[DataOrigin.Mongo] = ???
+    val results: List[(FormComponent, FormFieldValidationResult)] = ???
     Ok(
       renderEnrolmentSection(
         formTemplate,
         retrievals,
         enrolmentSection,
         data,
-        errorMap,
+        results, // errorMap,
         globalErrors,
         validationResult
       )
@@ -82,16 +88,31 @@ class EnrolmentResultProcessor(
   def recoverEnrolmentError(implicit request: Request[AnyContent], messages: Messages): SubmitEnrolmentError => Result =
     enrolmentError => {
 
-      def convertEnrolmentError(see: SubmitEnrolmentError): (ValidatedType[ValidationResult], List[ErrorLink]) =
+      /* def convertEnrolmentError(see: SubmitEnrolmentError): (ValidatedType[ValidatorsResult], List[Html]) = see match {
+       *   case RegimeIdNotMatch(identifierRecipe) =>
+       *     val regimeIdError = Map[ModelComponentId, Set[String]](
+       *       identifierRecipe.value.formComponentId.modelComponentId -> Set(messages("enrolment.error.regimeId")))
+       *     (Invalid(regimeIdError), List.empty)
+       *   case NoIdentifierProvided =>
+       *     val globalError = html.form.errors.error_global(messages("enrolment.error.missingIdentifier"))
+       *     (ValidatorsResult.empty.valid, globalError :: Nil)
+       *   case EnrolmentFormNotValid(invalid) => (Invalid(invalid), List.empty)
+       * } */
+
+      def convertEnrolmentError(see: SubmitEnrolmentError): (ValidatedType[ValidatorsResult], List[ErrorLink]) =
         see match {
           case RegimeIdNotMatch(identifierRecipe) =>
-            val regimeIdError = Map(identifierRecipe.value.toFieldId -> Set(messages("enrolment.error.regimeId")))
+            /* val regimeIdError = Map(identifierRecipe.value.toFieldId -> Set(messages("enrolment.error.regimeId")))
+             * (Invalid(regimeIdError), List.empty) */
+            val regimeIdError = Map[ModelComponentId, Set[String]](
+              identifierRecipe.value.formComponentId.modelComponentId -> Set(messages("enrolment.error.regimeId")))
             (Invalid(regimeIdError), List.empty)
+
           case NoIdentifierProvided =>
             val globalError = ErrorLink(
               content = content.Text(messages("enrolment.error.missingIdentifier"))
             )
-            (ValidationResult.empty.valid, globalError :: Nil)
+            (ValidatorsResult.empty.valid, globalError :: Nil)
           case EnrolmentFormNotValid(invalid) => (Invalid(invalid), List.empty)
         }
 
@@ -113,7 +134,7 @@ class EnrolmentResultProcessor(
           content = content.HtmlContent(html.form.errors.error_global_enrolment(formTemplate._id)))
 
         val globalErrors = globalError :: Nil
-        val validationResult = ValidationResult.empty.valid
+        val validationResult = ValidatorsResult.empty.valid
         getResult(validationResult, globalErrors)
       case CheckEnrolmentsResult.Failed =>
         // Nothing we can do here, so technical difficulties it is.

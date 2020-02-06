@@ -58,7 +58,7 @@ class JavascriptSpec extends Spec {
   }
 
   "if calculation references only a field in this section" should "not generate Javascript for the static calculation" in {
-    val result = fieldJavascript(formComponent("staticExpr", FormCtx("thisSection")))
+    val result = fieldJavascript(formComponent("staticExpr", FormCtx(FormComponentId("thisSection"))))
     val jsExp =
       """BigNumber(getValue("thisSection", 0, isHiddenthisSection)).decimalPlaces(numberOfDecimalPlaces, roundingMode);"""
     result should include(jsExp)
@@ -68,7 +68,7 @@ class JavascriptSpec extends Spec {
     val thisSection = "thisSection"
     val result =
       fieldJavascript(
-        formComponent("dynamicExpr", Sum(FormCtx(thisSection))),
+        formComponent("dynamicExpr", Sum(FormCtx(FormComponentId(thisSection)))),
         RepeatFormComponentIds(_ :: (1 until 5 map (i => FormComponentId(i + "_" + thisSection))).toList)
       )
     val jsExp =
@@ -77,7 +77,7 @@ class JavascriptSpec extends Spec {
   }
 
   "if calculation adds a field in this section" should "generate Javascript for the dynamic calculation" in {
-    val result = fieldJavascript(formComponent("dynamicExpr", Add(FormCtx("thisSection"), c)))
+    val result = fieldJavascript(formComponent("dynamicExpr", Add(FormCtx(FormComponentId("thisSection")), c)))
     val jsExp =
       """BigNumber(add(getValue("thisSection", 0, isHiddenthisSection), 5)).decimalPlaces(numberOfDecimalPlaces, roundingMode);"""
     result should include(jsExp)
@@ -87,7 +87,7 @@ class JavascriptSpec extends Spec {
     val result = fieldJavascript(
       formComponent(
         "dynamicExpr",
-        Add(c, Add(Subtraction(c, Subtraction(Multiply(c, Multiply(FormCtx("thisSection"), c)), c)), c))))
+        Add(c, Add(Subtraction(c, Subtraction(Multiply(c, Multiply(FormCtx(FormComponentId("thisSection")), c)), c)), c))))
     val jsExp =
       """BigNumber(add(5, add(subtract(5, subtract(multiply(5, multiply(getValue("thisSection", 0, isHiddenthisSection), 5)), 5)), 5))).decimalPlaces(numberOfDecimalPlaces, roundingMode);"""
     result should include(jsExp)

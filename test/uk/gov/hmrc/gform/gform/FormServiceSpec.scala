@@ -18,10 +18,9 @@ package uk.gov.hmrc.gform.gform
 
 import org.scalacheck.Gen
 import uk.gov.hmrc.gform.Spec
-import uk.gov.hmrc.gform.models.gform.FormComponentValidation
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.generators.FormComponentGen
-import uk.gov.hmrc.gform.validation.{ FieldError, FieldOk }
+import uk.gov.hmrc.gform.validation.{ FieldError, FieldOk, FormFieldValidationResult, ValidationResult }
 import uk.gov.hmrc.gform.ops.FormComponentOps
 
 class FormServiceSpec extends Spec {
@@ -42,55 +41,39 @@ class FormServiceSpec extends Spec {
   private val genFormComponentPNConstraint: Gen[FormComponent] =
     genFormComponent.map(e => e.copy(`type` = textPositiveNumberConstraint))
 
-  "removeCommasAndPoundSymbol" should "remove any commas from the FormFieldValidationResult when FormComponent type is of type Sterling" +
-    "of Sterling" in {
+  private def headValue(formComponent: FormComponent, formFieldValidationResult: FormFieldValidationResult): String =
+    new ValidationResult(
+      Map(formComponent.id -> formFieldValidationResult),
+      None
+    ).toFormValidationOutcome.formData.fields.head.value
+
+  "ValidationResult" should "remove any commas from the FormFieldValidationResult when FormComponent type is of type Sterling" in {
     forAll(genFormComponentSterlingConstraint) { formComponent =>
-      FormService
-        .removeCommasAndPoundSymbol(List(FormComponentValidation(formComponent, FieldOk(formComponent, "£1000.25"))))
-        .head
-        .formFieldValidationResult
-        .getCurrentValue shouldBe Some("1000.25")
+      headValue(formComponent, FieldOk(formComponent, "£1000.25")) shouldBe "1000.25"
     }
   }
 
   it should "not remove any commas from the FormFieldValidationResult when FormFieldValidationResult is not equal to FieldOk" in {
     forAll(genFormComponentSterlingConstraint) { formComponent =>
-      FormService
-        .removeCommasAndPoundSymbol(
-          List(FormComponentValidation(formComponent, FieldError(formComponent, "£1,000.25", Set("someErrors")))))
-        .head
-        .formFieldValidationResult
-        .getCurrentValue shouldBe Some("£1,000.25")
+      headValue(formComponent, FieldError(formComponent, "£1,000.25", Set("someErrors"))) shouldBe "£1,000.25"
     }
   }
 
   it should "remove any commas from the FormFieldValidationResult when FormComponent type is Number" in {
     forAll(genFormComponentPNConstraint) { formComponent =>
-      FormService
-        .removeCommasAndPoundSymbol(List(FormComponentValidation(formComponent, FieldOk(formComponent, "1,000,000"))))
-        .head
-        .formFieldValidationResult
-        .getCurrentValue shouldBe Some("1000000")
+      headValue(formComponent, FieldOk(formComponent, "1,000,000")) shouldBe "1000000"
     }
   }
 
   it should "remove any commas from the FormFieldValidationResult when FormComponent type is PositiveNumber" in {
     forAll(genFormComponentNumberConstraint) { formComponent =>
-      FormService
-        .removeCommasAndPoundSymbol(List(FormComponentValidation(formComponent, FieldOk(formComponent, "£1,000,000"))))
-        .head
-        .formFieldValidationResult
-        .getCurrentValue shouldBe Some("1000000")
+      headValue(formComponent, FieldOk(formComponent, "1,000,000")) shouldBe "1000000"
     }
   }
 
   it should "leave commas untouched, when FormComponent type does not equal Sterling, Number or Positive Number" in {
     forAll(genFormComponent.filterNot(x => x.isSterling || x.isNumber || x.isPositiveNumber)) { formComponent =>
-      FormService
-        .removeCommasAndPoundSymbol(List(FormComponentValidation(formComponent, FieldOk(formComponent, "£1,000.25"))))
-        .head
-        .formFieldValidationResult
-        .getCurrentValue shouldBe Some("£1,000.25")
+      headValue(formComponent, FieldOk(formComponent, "£1,000.25")) shouldBe "£1,000.25"
     }
   }
 }

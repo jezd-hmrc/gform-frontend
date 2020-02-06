@@ -17,7 +17,7 @@
 package uk.gov.hmrc.gform.sharedmodel.formtemplate.generators
 import org.scalacheck.Gen
 import uk.gov.hmrc.gform.sharedmodel.form.FormStatus
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.TextExpression
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Expr, TextExpression }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.destinations.{ Destination, DestinationId }
 import uk.gov.hmrc.gform.sharedmodel.notifier.{ NotifierPersonalisationFieldId, NotifierTemplateId }
 
@@ -30,7 +30,7 @@ trait DestinationGen {
 
   def dmsFormIdGen: Gen[String] = PrimitiveGen.nonEmptyAlphaNumStrGen
   def classificationTypeGen: Gen[String] = PrimitiveGen.nonEmptyAlphaNumStrGen
-  def customerIdGen: Gen[TextExpression] = FormatExprGen.textExpressionGen
+  def customerIdGen: Gen[Expr] = ExprGen.exprGen()
   def businessAreaGen: Gen[String] = PrimitiveGen.nonEmptyAlphaNumStrGen
 
   def hmrcDmsGen: Gen[Destination.HmrcDms] =

@@ -22,33 +22,26 @@ import uk.gov.hmrc.gform.auth.UtrEligibilityRequest
 
 import scala.language.higherKinds
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
-import uk.gov.hmrc.gform.eval.BooleanExprEval
-import uk.gov.hmrc.gform.graph.{ Evaluator, RecData }
+import uk.gov.hmrc.gform.eval.{ BooleanExprEval, SeissEligibilityChecker }
+import uk.gov.hmrc.gform.graph.RecData
 import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
-import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Eeitt, FormTemplate }
+import uk.gov.hmrc.gform.sharedmodel.form.FormModelOptics
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.FormTemplate
 import uk.gov.hmrc.http.HeaderCarrier
 
 trait GraphSpec {
-  private def eeittPrepop[F[_]: Monad](
-    eeitt: Eeitt,
-    retrievals: MaterialisedRetrievals,
-    formTemplate: FormTemplate,
-    hc: HeaderCarrier): F[String] = "data-returned-from-eeitt".pure[F]
 
-  private def eligibilityStatusTrue[F[_]: Monad](request: UtrEligibilityRequest, hc: HeaderCarrier): F[Boolean] =
-    true.pure[F]
+  private def eligibilityStatusTrue[F[_]: Monad]: SeissEligibilityChecker[F] =
+    new SeissEligibilityChecker[F]((_, _) => true.pure[F])
 
-  private def eligibilityStatusFalse[F[_]: Monad](request: UtrEligibilityRequest, hc: HeaderCarrier): F[Boolean] =
-    false.pure[F]
+  private def eligibilityStatusFalse[F[_]: Monad]: SeissEligibilityChecker[F] =
+    new SeissEligibilityChecker[F]((_, _) => false.pure[F])
 
-  def evaluator[F[_]: Monad]: Evaluator[F] = new Evaluator[F](eeittPrepop[F])
+  def booleanExprEval[F[_]: Monad]: BooleanExprEval[F] = new BooleanExprEval[F](eligibilityStatusTrue[F])
 
-  def booleanExprEval[F[_]: Monad]: BooleanExprEval[F] = new BooleanExprEval[F](evaluator, eligibilityStatusTrue[F])
+  def booleanExprEval2[F[_]: Monad]: BooleanExprEval[F] = new BooleanExprEval[F](eligibilityStatusFalse[F])
 
-  def booleanExprEval2[F[_]: Monad]: BooleanExprEval[F] = new BooleanExprEval[F](evaluator, eligibilityStatusFalse[F])
-
-  protected def mkFormDataRecalculated(data: VariadicFormData): FormDataRecalculated =
-    FormDataRecalculated.empty.copy(recData = RecData.fromData(data))
+  /* protected def mkFormDataRecalculated(data: VariadicFormData[SourceOrigin.OutOfDate]): FormDataRecalculated =
+ *   FormDataRecalculated.empty.copy(recData = RecData.fromData(data)) */
 
 }

@@ -173,7 +173,8 @@ class ApplicationModule(context: Context)
     controllersModule,
     graphModule,
     lookupRegistry,
-    this
+    this,
+    fileUploadModule
   )
 
   val applicationCrypto: ApplicationCrypto = new ApplicationCrypto(configModule.typesafeConfig)

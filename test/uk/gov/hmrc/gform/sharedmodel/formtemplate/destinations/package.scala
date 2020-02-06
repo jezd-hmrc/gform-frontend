@@ -52,7 +52,7 @@ package object destinations {
           |  ${optionalField("failOnError", Option(destination.failOnError), true)}
           |  "${Destination.typeDiscriminatorFieldName}": "${Destination.hmrcDms}",
           |  "dmsFormId": "$dmsFormId",
-          |  "customerId": ${TextExpression.format.writes(customerId)},
+          |  "customerId": ${Expr.format.writes(customerId)},
           |  "classificationType": "$classificationType",
           |  "businessArea": "$businessArea"
           |}""".stripMargin

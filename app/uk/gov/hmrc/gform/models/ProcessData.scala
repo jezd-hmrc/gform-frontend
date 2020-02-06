@@ -25,7 +25,9 @@ import cats.{ Monad, MonadError }
 import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.graph.{ RecData, Recalculation }
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
-import uk.gov.hmrc.gform.sharedmodel.form.{ FormDataRecalculated, VisitIndex }
+import uk.gov.hmrc.gform.models.optics.{ DataOrigin, FormModelRenderPageOptics, FormModelVisibilityOptics }
+import uk.gov.hmrc.gform.sharedmodel.BooleanExprCache
+import uk.gov.hmrc.gform.sharedmodel.form.{ FormModelOptics, VisitIndex }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponentId, Section }
 import uk.gov.hmrc.gform.sharedmodel._
 import uk.gov.hmrc.http.HeaderCarrier
@@ -34,33 +36,19 @@ import uk.gov.hmrc.gform.models.gform.ObligationsAction
 import scala.util.Try
 
 case class ProcessData(
-  data: FormDataRecalculated,
-  sections: List[Section],
+  formModelOptics: FormModelOptics[DataOrigin.Browser],
   visitsIndex: VisitIndex,
-  obligations: Obligations)
-
-class ProcessDataService[F[_]: Monad, E](
-  recalculation: Recalculation[F, E],
-  taxPeriodStateChecker: TaxPeriodStateChecker[F, E]
+  obligations: Obligations,
+  booleanExprCache: BooleanExprCache
 ) {
+  val formModel: FormModel[DataExpanded] = formModelOptics.formModelRenderPageOptics.formModel
+}
 
-  def updateSectionVisits(
-    dataRaw: VariadicFormData,
-    sections: List[Section],
-    mongoSections: List[Section],
-    visitsIndex: VisitIndex): Set[Int] =
-    visitsIndex.visitsIndex
-      .map { index =>
-        Try(mongoSections(index)).toOption.fold(-1) { section =>
-          val firstComponentId = section.fields.head.id
-          sections.indexWhere { s =>
-            s.fields.head.id === firstComponentId
-          }
-        }
-      }
-      .filterNot(_ === -1)
+class ProcessDataService[F[_]: Monad](
+  recalculation: Recalculation[F, Throwable],
+  taxPeriodStateChecker: TaxPeriodStateChecker[F, Throwable]) {
 
-  def hmrcTaxPeriodWithId(recData: RecData): Option[NonEmptyList[HmrcTaxPeriodWithEvaluatedId]] =
+  def hmrcTaxPeriodWithId(recData: RecData[SourceOrigin.Current]): Option[NonEmptyList[HmrcTaxPeriodWithEvaluatedId]] =
     recData.recalculatedTaxPeriod.map {
       case (periodKey, idNumberValue) =>
         HmrcTaxPeriodWithEvaluatedId(periodKey, idNumberValue)
@@ -69,60 +57,53 @@ class ProcessDataService[F[_]: Monad, E](
       case Nil     => None
     }
 
-  def getProcessData(
-    dataRaw: VariadicFormData,
+  def getProcessData[U <: SectionSelectorType: SectionSelector](
+    dataRaw: VariadicFormData[SourceOrigin.OutOfDate],
     cache: AuthCacheWithForm,
+    formModelOptics: FormModelOptics[DataOrigin.Mongo],
     getAllTaxPeriods: NonEmptyList[HmrcTaxPeriodWithEvaluatedId] => F[NonEmptyList[ServiceCallResponse[TaxResponse]]],
-    obligationsAction: ObligationsAction,
-    maybeAccessCode: Option[AccessCode]
+    obligationsAction: ObligationsAction
   )(
     implicit hc: HeaderCarrier,
-    me: MonadError[F, E],
+    me: MonadError[F, Throwable],
     l: LangADT
-  ): F[ProcessData] =
+  ): F[ProcessData] = {
+
+    val mongoData = formModelOptics
     for {
-      browserRecalculated <- recalculateDataAndSections(dataRaw, cache, maybeAccessCode)
-      mongoRecalculated   <- recalculateDataAndSections(cache.variadicFormData, cache, maybeAccessCode)
-      (data, sections) = browserRecalculated
-      (oldData, mongoSections) = mongoRecalculated
+
+      browserFormModelOptics <- FormModelOptics
+                                 .mkFormModelOptics[DataOrigin.Browser, F, U](dataRaw, cache, recalculation)
+
       obligations <- taxPeriodStateChecker.callDesIfNeeded(
                       getAllTaxPeriods,
-                      hmrcTaxPeriodWithId(data.recData),
+                      hmrcTaxPeriodWithId(browserFormModelOptics.formModelRenderPageOptics.recData),
                       cache.form.thirdPartyData.obligations,
-                      data.recData.recalculatedTaxPeriod,
-                      oldData.recData.recalculatedTaxPeriod,
+                      browserFormModelOptics.formModelRenderPageOptics.recData.recalculatedTaxPeriod,
+                      mongoData.formModelRenderPageOptics.recData.recalculatedTaxPeriod,
                       obligationsAction
                     )
 
     } yield {
 
-      val dataUpd = new ObligationValidator {}.validateWithDes(
-        data,
-        cache.form.thirdPartyData.obligations,
+      val dataUpd: FormModelOptics[DataOrigin.Browser] = new ObligationValidator {}
+        .validateWithDes(
+          browserFormModelOptics,
+          cache.form.thirdPartyData.obligations,
+          obligations,
+          FormModelOptics.clearTaxResponses)
+
+      val newVisitIndex =
+        VisitIndex.updateSectionVisits(
+          browserFormModelOptics.formModelRenderPageOptics.formModel,
+          mongoData.formModelRenderPageOptics.formModel,
+          cache.form.visitsIndex)
+
+      ProcessData(
+        dataUpd,
+        VisitIndex(newVisitIndex),
         obligations,
-        FormDataRecalculated.clearTaxResponses)
-
-      val newVisitIndex = updateSectionVisits(dataRaw, sections, mongoSections, cache.form.visitsIndex)
-
-      ProcessData(dataUpd, sections, VisitIndex(newVisitIndex), obligations)
+        browserFormModelOptics.formModelVisibilityOptics.booleanExprCache)
     }
-
-  def recalculateDataAndSections(data: VariadicFormData, cache: AuthCacheWithForm, maybeAccessCode: Option[AccessCode])(
-    implicit hc: HeaderCarrier,
-    me: MonadError[F, E]
-  ): F[(FormDataRecalculated, List[Section])] =
-    for {
-      formDataRecalculated <- recalculation
-                               .recalculateFormData(
-                                 data,
-                                 cache.formTemplate,
-                                 cache.retrievals,
-                                 cache.form.thirdPartyData,
-                                 maybeAccessCode,
-                                 cache.form.envelopeId)
-    } yield {
-      val sections = RepeatingComponentService.getAllSections(cache.formTemplate, formDataRecalculated)
-      (formDataRecalculated, sections)
-    }
-
+  }
 }

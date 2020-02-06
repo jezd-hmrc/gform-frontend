@@ -16,14 +16,30 @@
 
 package uk.gov.hmrc.gform.sharedmodel.formtemplate
 
+import cats.syntax.option._
 import julienrf.json.derived
 import play.api.libs.json._
 
-sealed trait DataSource
+sealed trait DataSource {
+  def convertToString(): String = this match {
+    case DataSource.SeissEligible     => DataSource.seiss
+    case DataSource.Mongo(collection) => DataSource.mongoPrefix + collection
+  }
+}
 
 object DataSource {
   case object SeissEligible extends DataSource
   case class Mongo(collectionName: String) extends DataSource
 
   implicit val format: OFormat[DataSource] = derived.oformat
+
+  def fromString(str: String): Option[DataSource] = str match {
+    case `seiss`                                          => DataSource.SeissEligible.some
+    case maybeMongo if maybeMongo.startsWith(mongoPrefix) => DataSource.Mongo(maybeMongo.replace(mongoPrefix, "")).some
+    case _                                                => none
+  }
+
+  val seiss = "seiss"
+  val mongoPrefix = "mongo."
+
 }

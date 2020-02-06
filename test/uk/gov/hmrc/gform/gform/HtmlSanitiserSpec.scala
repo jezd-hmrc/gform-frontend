@@ -162,7 +162,6 @@ class HtmlSanitiserSpec extends Spec {
   <script src="/submissions/assets/javascripts/gformGAEvents.js"></script>
   <script src="/submissions/assets/javascripts/gformFileUpload.js"></script>
   <script src="/submissions/assets/javascripts/gformRepeatingGroups.js"></script>
-  <script src="/submissions/assets/javascripts/gformErrorSummary.js"></script>
   <script src="/submissions/assets/javascripts/gformToggleAddressDivsAndLabels.js"></script>
   <script src="/submissions/assets/javascripts/gformFormActionHandlers.js"></script>
   <script src="/submissions/assets/javascripts/gformSummaryLayout.js"></script>

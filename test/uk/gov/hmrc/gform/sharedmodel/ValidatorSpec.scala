@@ -63,5 +63,5 @@ class ValidatorSpec extends Spec {
     validator shouldBe t
   }
 
-  private def customFormCtxJson(fc: FormCtx): JsString = JsString(s"""$${${fc.value}}""")
+  private def customFormCtxJson(fc: FormCtx): JsString = JsString(s"""$${${fc.formComponentId.value}}""")
 }

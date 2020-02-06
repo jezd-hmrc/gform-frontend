@@ -48,7 +48,7 @@ object Javascript {
     val dynamicFcIds = sectionFieldIds ++ jsRevealingChoiceModels.map(_.fc.id).toSet
 
     def isDynamic(expr: Expr): Boolean = expr match {
-      case f @ FormCtx(_)              => dynamicFcIds.contains(f.toFieldId)
+      case FormCtx(formComponentId)    => dynamicFcIds.contains(formComponentId)
       case Sum(f)                      => isDynamic(f)
       case Add(field1, field2)         => isDynamic(field1) || isDynamic(field2)
       case Subtraction(field1, field2) => isDynamic(field1) || isDynamic(field2)
@@ -166,9 +166,9 @@ object Javascript {
 
     def computeExpr(expr: Expr, opIdentity: Int): String = {
 
-      def sum(id: String) = {
-        val groupFcIds: List[FormComponentId] = repeatFormComponentIds.op(FormComponentId(id))
-        val sumExpr = groupFcIds.map(x => FormCtx(x.value)).foldLeft(additionIdentityExpr)(Add)
+      def sum(id: FormComponentId) = {
+        val groupFcIds: List[FormComponentId] = repeatFormComponentIds.op(id)
+        val sumExpr = groupFcIds.map(x => FormCtx(x)).foldLeft(additionIdentityExpr)(Add)
         computeExpr(sumExpr, additionIdentity)
       }
 

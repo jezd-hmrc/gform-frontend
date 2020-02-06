@@ -118,7 +118,7 @@ class TaxPeriodStateCheckerTest extends Spec {
       NonEmptyList[ServiceCallResponse[TaxResponse]],
       NonEmptyList[TaxResponse],
       RetrievedObligations) => Assertion): Unit = {
-    val taxPeriod = HmrcTaxPeriod(IdType("id"), FormCtx("ctx"), RegimeType("AAA"))
+    val taxPeriod = HmrcTaxPeriod(IdType("id"), FormCtx(FormComponentId("ctx")), RegimeType("AAA"))
     val periodKey = RecalculatedTaxPeriodKey(FormComponentId("idOne"), taxPeriod)
     val idNumber1 = IdNumberValue("111")
     val idNumber2 = IdNumberValue("222")

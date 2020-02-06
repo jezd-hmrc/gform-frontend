@@ -17,25 +17,28 @@
 package uk.gov.hmrc.gform.models
 
 import cats.data.NonEmptyList
-import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
+import uk.gov.hmrc.gform.models.optics.DataOrigin
+import uk.gov.hmrc.gform.sharedmodel.SourceOrigin
+import uk.gov.hmrc.gform.sharedmodel.form.FormModelOptics
 import uk.gov.hmrc.gform.sharedmodel.{ Obligations, RetrievedObligations, TaxResponse }
 
 trait ObligationValidator extends TaxSelectionNavigator {
 
   def validateWithDes(
-    formDataRecalculated: FormDataRecalculated,
+    formModelOptics: FormModelOptics[DataOrigin.Browser],
     cachedObligation: Obligations,
     desObligation: Obligations,
-    clearTaxResponses: FormDataRecalculated => FormDataRecalculated): FormDataRecalculated =
+    clearTaxResponses: FormModelOptics[DataOrigin.Browser] => FormModelOptics[DataOrigin.Browser])
+    : FormModelOptics[DataOrigin.Browser] =
     (cachedObligation, desObligation) match {
       case (RetrievedObligations(obligation), RetrievedObligations(responseObligation))
-          if mayClear(formDataRecalculated, obligation, responseObligation) =>
-        clearTaxResponses(formDataRecalculated)
-      case _ => formDataRecalculated
+          if mayClear(formModelOptics, obligation, responseObligation) =>
+        clearTaxResponses(formModelOptics)
+      case _ => formModelOptics
     }
 
   private def mayClear(
-    formDataRecalculated: FormDataRecalculated,
+    formModelOptics: FormModelOptics[DataOrigin.Browser],
     cachedObligation: NonEmptyList[TaxResponse],
     responseObligation: NonEmptyList[TaxResponse]): Boolean =
     cachedObligation.toList
@@ -43,6 +46,6 @@ trait ObligationValidator extends TaxSelectionNavigator {
       .map {
         case (cached, taxResponse) => (cached.obligation, taxResponse)
       }
-      .map { case (obligation, taxResponse) => taxSelectionNavigator(formDataRecalculated, obligation, taxResponse) }
+      .map { case (obligation, taxResponse) => taxSelectionNavigator(formModelOptics, obligation, taxResponse) }
       .count(_ == GoBackToTaxPeriodSelection) > 0
 }
