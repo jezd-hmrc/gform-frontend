@@ -17,11 +17,11 @@
 package uk.gov.hmrc.gform
 
 import uk.gov.hmrc.gform.sharedmodel.SmartString
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponent, IncludeIf, Page, Section }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, FormComponent, IncludeIf, Page, Section }
 
 package object formtemplate {
   implicit class SectionSyntax(section: Section) {
-    def page(): Page =
+    def page(): Page[Basic] =
       section match {
         case s: Section.NonRepeatingPage => s.page
         case s: Section.RepeatingPage    => s.page
@@ -61,6 +61,12 @@ package object formtemplate {
         case s: Section.NonRepeatingPage => s.copy(page = s.page.copy(includeIf = includeIf))
         case s: Section.RepeatingPage    => s.copy(page = s.page.copy(includeIf = includeIf))
         case _: Section.AddToList        => throw new Exception("Cannot update fields of a Section.AddToList")
+      }
+    def fields(): List[FormComponent] =
+      section match {
+        case s: Section.NonRepeatingPage => s.page.fields
+        case s: Section.RepeatingPage    => s.page.fields
+        case _: Section.AddToList        => throw new Exception("Cannot get fields of a Section.AddToList")
       }
   }
 }

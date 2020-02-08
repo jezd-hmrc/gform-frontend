@@ -46,7 +46,7 @@ sealed trait TemporarySectionOpsForGforms364 {
 sealed trait Section extends TemporarySectionOpsForGforms364 with Product with Serializable {
   def title: SmartString
   def expandSectionFull(): List[ExpandedSection]
-  def expandedFormComponents(): List[FormComponent]
+  //def expandedFormComponents(): List[FormComponent]
 
   def validators: Option[Validator] = this match {
     case Section.NonRepeatingPage(page)         => page.validators
@@ -91,7 +91,7 @@ object Section {
 
     override def expandSectionFull(): List[ExpandedSection] =
       ExpandedSection(page.fields.map(_.expandFormComponentFull), page.includeIf) :: Nil
-    override def expandedFormComponents(): List[FormComponent] = page.expandedFormComponents
+    //override def expandedFormComponents(): List[FormComponent] = page.expandedFormComponents
   }
 
   case class RepeatingPage(page: Page[Basic], repeats: TextExpression) extends Section {
@@ -103,7 +103,7 @@ object Section {
 
     override def expandSectionFull(): List[ExpandedSection] =
       ExpandedSection(page.fields.map(_.expandFormComponentFull), page.includeIf) :: Nil // TODO expand repeats
-    override def expandedFormComponents(): List[FormComponent] = page.expandedFormComponents
+    //override def expandedFormComponents(): List[FormComponent] = page.expandedFormComponents
   }
 
   case class AddToList(
@@ -121,7 +121,7 @@ object Section {
       pages.toList.map(page => ExpandedSection(page.fields.map(_.expandFormComponentFull), page.includeIf))
     //override def fields: List[FormComponent] = pages.toList.flatMap(_.expandedFormComponents)
 
-    override lazy val expandedFormComponents: List[FormComponent] = pages.toList.flatMap(_.expandedFormComponents)
+    //override lazy val expandedFormComponents: List[FormComponent] = pages.toList.flatMap(_.expandedFormComponents)
   }
 
   implicit val format: OFormat[Section] = derived.oformat[Section]

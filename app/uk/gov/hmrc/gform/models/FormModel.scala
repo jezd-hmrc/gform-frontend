@@ -20,21 +20,16 @@ import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.graph.RecData
 import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, ExpandedFormTemplate, FormComponent, FormComponentId, FormTemplate, FullyExpanded, GroupExpanded, IncludeIf, Page, PageMode, Section, SectionNumber }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, ExpandedFormComponent, ExpandedFormTemplate, FormComponent, FormComponentId, FormTemplate, FullyExpanded, GroupExpanded, IncludeIf, Page, PageMode, Section, SectionNumber }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.Section.{ AddToList, NonRepeatingPage, RepeatingPage }
-
-/* sealed trait FormModelMode extends Product with Serializable
- * trait DataDriven extends FormModelMode
- * trait VisibleOnly extends FormModelMode
- * trait Expanded extends FormModelMode */
 
 case class FormModel[A <: PageMode](pages: List[PageModel[A]]) extends AnyVal {
   def apply(sectionNumber: SectionNumber): PageModel[A] = pages(sectionNumber.value)
 
   def visible(data: FormDataRecalculated): FormModel[A] = FormModel(pages.filter(data.isVisible))
 
-  def visibleWithIndex(data: FormDataRecalculated): List[(PageModel[A], Int)] = pages.zipWithIndex.collect {
-    case (section, index) if data.isVisible(section) => (section, index)
+  def visibleWithIndex(data: FormDataRecalculated): List[(PageModel[A], SectionNumber)] = pages.zipWithIndex.collect {
+    case (section, index) if data.isVisible(section) => (section, SectionNumber(index))
   }
 
   def expand(data: FormDataRecalculated): ExpandedFormTemplate = ???
@@ -86,7 +81,11 @@ object FormModel {
       }
   }
 
-  def expandGroup(page: Page[Basic], data: FormDataRecalculated): Page[GroupExpanded] = ???
+  def expandGroup(page: Page[Basic], data: FormDataRecalculated): Page[GroupExpanded] = {
+    val ss: List[ExpandedFormComponent] = page.fields.map(_.expandFormComponent(data.recData.data))
+    page.copy(fields = ss.flatMap(_.formComponents))
+  }
+
   def expandRepeatedSection(
     page: Page[GroupExpanded],
     repeatingPage: Section.RepeatingPage,

@@ -26,11 +26,7 @@ trait Navigation {
   def formModel: FormModel[FullyExpanded]
   def data: FormDataRecalculated
 
-  lazy val availableSectionNumbers: List[SectionNumber] = {
-    formModel.pages.zipWithIndex.collect {
-      case (page, index) if data.isVisible(page) => SectionNumber(index)
-    }
-  }
+  lazy val availableSectionNumbers: List[SectionNumber] = formModel.visibleWithIndex(data).map(_._2)
 
   lazy val minSectionNumber: SectionNumber = availableSectionNumbers.min(Ordering.by((_: SectionNumber).value))
 }

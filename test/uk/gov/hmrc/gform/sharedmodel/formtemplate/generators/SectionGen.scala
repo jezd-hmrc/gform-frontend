@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.gform.sharedmodel.formtemplate.generators
 import org.scalacheck.Gen
-import uk.gov.hmrc.gform.sharedmodel.formtemplate._
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, _ }
 import SmartStringGen.smartStringGen
 
 trait SectionGen {
@@ -58,7 +58,7 @@ trait SectionGen {
       fields      <- PrimitiveGen.oneOrMoreGen(FormComponentGen.formComponentGen())
     } yield DeclarationSection(title, description, shortName, fields.toList)
 
-  def pageGen: Gen[Page] =
+  def pageGen: Gen[Page[Basic]] =
     for {
       title             <- smartStringGen
       description       <- Gen.option(smartStringGen)
@@ -94,13 +94,14 @@ trait SectionGen {
 
   def addToListSectionGen: Gen[Section.AddToList] =
     for {
+      addToListId <- AddToListIdGen.addToListIdGen
       title       <- smartStringGen
       description <- Gen.option(smartStringGen)
       shortName   <- Gen.option(smartStringGen)
       includeIf   <- Gen.option(IncludeIfGen.includeIfGen)
       repeatsMax  <- Gen.option(FormatExprGen.textExpressionGen)
       pages       <- PrimitiveGen.oneOrMoreGen(pageGen)
-    } yield Section.AddToList(title, description, shortName, includeIf, repeatsMax, pages)
+    } yield Section.AddToList(addToListId, title, description, shortName, includeIf, repeatsMax, pages)
 
   def sectionGen: Gen[Section] = Gen.oneOf(nonRepeatingPageSectionGen, repeatingPageSectionGen)
 }

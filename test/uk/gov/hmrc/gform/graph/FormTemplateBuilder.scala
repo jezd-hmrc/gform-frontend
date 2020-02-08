@@ -37,20 +37,33 @@ object FormTemplateBuilder {
       None
     )
 
-  def mkSection(formComponents: FormComponent*): Section = mkSection(formComponents.toList)
-  def mkSection(formComponents: List[FormComponent]) =
-    Section.NonRepeatingPage(
-      Page(
-        toSmartString("Section Name"),
-        None,
-        None,
-        None,
-        None,
-        None,
-        formComponents,
-        None,
-        None
-      ))
+  private def page(formComponents: List[FormComponent]): Page[Basic] = Page(
+    toSmartString("Section Name"),
+    None,
+    None,
+    None,
+    None,
+    None,
+    formComponents,
+    None,
+    None
+  )
+
+  def mkAddToListSection(formComponents: List[FormComponent]*): Section.AddToList =
+    Section.AddToList(
+      AddToListId("Owner"),
+      toSmartString("Pet owner"),
+      None,
+      None,
+      None,
+      None,
+      NonEmptyList.fromListUnsafe(formComponents.toList.map(page))
+    )
+
+  def mkRepeatingPageSection(formComponents: List[FormComponent]): Section.RepeatingPage =
+    Section.RepeatingPage(page(formComponents), TextExpression(Constant("1")))
+  def mkSection(formComponents: FormComponent*): Section.NonRepeatingPage = mkSection(formComponents.toList)
+  def mkSection(formComponents: List[FormComponent]) = Section.NonRepeatingPage(page(formComponents))
 
   def mkSectionIncludeIf(formComponents: List[FormComponent], includeIf: IncludeIf) =
     Section.NonRepeatingPage(

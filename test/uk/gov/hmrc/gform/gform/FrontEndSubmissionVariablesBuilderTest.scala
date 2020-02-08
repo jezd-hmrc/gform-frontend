@@ -25,6 +25,8 @@ import uk.gov.hmrc.gform.auth.models.AuthenticatedRetrievals
 import uk.gov.hmrc.gform.graph.processor.IdentifierExtractor
 import FrontEndSubmissionVariablesBuilder._
 import uk.gov.hmrc.gform.formtemplate.SectionSyntax
+import uk.gov.hmrc.gform.models.FormModel
+import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.generators.FormComponentGen._
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.generators.FormTemplateGen
@@ -39,13 +41,18 @@ class FrontEndSubmissionVariablesBuilderTest extends Spec with FormTemplateGen {
         materialisedRetrievalsAgent.copy(enrolments = Enrolments(Set(irsaEnrolment)))
       val enrolmentAuth = EnrolmentAuth(ServiceId("IR-SA"), Never)
 
+      val templateUpd = template
+        .copy(
+          sections = template.sections.map(s => s.updateFields(s.fields.map(_.copy(`type` = enrolledIdType)))),
+          authConfig = HmrcAgentWithEnrolmentModule(AllowAnyAgentAffinityUser, enrolmentAuth)
+        )
+
+      val formModel = FormModel.expand(templateUpd, FormDataRecalculated.empty)
+
       val actual = FrontEndSubmissionVariablesBuilder(
         retrievals,
-        template
-          .copy(
-            sections = template.sections.map(s => s.updateFields(s.fields.map(_.copy(`type` = enrolledIdType)))),
-            authConfig = HmrcAgentWithEnrolmentModule(AllowAnyAgentAffinityUser, enrolmentAuth)
-          ),
+        templateUpd,
+        formModel,
         CustomerId("cid")
       )
 
@@ -74,7 +81,10 @@ class FrontEndSubmissionVariablesBuilderTest extends Spec with FormTemplateGen {
             authConfig = HmrcAgentWithEnrolmentModule(AllowAnyAgentAffinityUser, enrolmentAuth)
           )
 
-      val actual = FrontEndSubmissionVariablesBuilder(retrievals, templateWithAtLeastTwoFields, CustomerId("cid"))
+      val formModel = FormModel.expand(templateWithAtLeastTwoFields, FormDataRecalculated.empty)
+
+      val actual =
+        FrontEndSubmissionVariablesBuilder(retrievals, templateWithAtLeastTwoFields, formModel, CustomerId("cid"))
       actual shouldBe FrontEndSubmissionVariables(
         Json.parse("""{"user":{"enrolledIdentifier":"SA value","customerId":"cid"}}"""))
     }

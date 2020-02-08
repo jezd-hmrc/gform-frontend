@@ -31,6 +31,7 @@ import uk.gov.hmrc.gform.formtemplate.SectionSyntax
 import uk.gov.hmrc.gform.gform.SectionRenderingService
 import uk.gov.hmrc.gform.graph.RecData
 import uk.gov.hmrc.gform.lookup.LookupRegistry
+import uk.gov.hmrc.gform.models.{ FormModel, FormModelSupport, Singleton }
 import uk.gov.hmrc.gform.sharedmodel.form.{ FormDataRecalculated, ValidationResult }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.gform.sharedmodel.{ ExampleData, LangADT, NotChecked, VariadicFormData }
@@ -43,7 +44,7 @@ import play.twirl.api.{ Html, HtmlFormat }
 import scala.collection.JavaConverters
 import scala.collection.immutable.List
 
-class SectionRenderingServiceSpec extends Spec {
+class SectionRenderingServiceSpec extends Spec with FormModelSupport {
 
   implicit val request: Request[AnyContentAsEmpty.type] =
     FakeRequest()
@@ -73,14 +74,14 @@ class SectionRenderingServiceSpec extends Spec {
     override def head(linkElem: Option[Html], headScripts: Option[Html]): HtmlFormat.Appendable = null
 
     override def footer(
-      analyticsToken: scala.Option[scala.Predef.String],
-      analyticsHost: scala.Predef.String,
-      ssoUrl: scala.Option[scala.Predef.String],
-      scriptElem: scala.Option[play.twirl.api.Html],
-      gaCalls: scala.Option[(String, String) => Html],
-      analyticsAnonymizeIp: scala.Boolean,
-      analyticsAdditionalJs: scala.Option[play.twirl.api.Html],
-      allowQueryStringInAnalytics: scala.Boolean): HtmlFormat.Appendable =
+      analyticsToken: Option[String],
+      analyticsHost: String,
+      ssoUrl: Option[String],
+      scriptElem: Option[Html],
+      gaCalls: Option[(String, String) => Html],
+      analyticsAnonymizeIp: Boolean,
+      analyticsAdditionalJs: Option[Html],
+      allowQueryStringInAnalytics: Boolean): HtmlFormat.Appendable =
       null
 
     override def webchatClickToChatScriptPartial(entryPoint: String, template: String)(implicit request: Request[_]) =
@@ -90,6 +91,10 @@ class SectionRenderingServiceSpec extends Spec {
   val testService = new SectionRenderingService(frontendAppConfig, lookupRegistry)
 
   "SectionRenderingService" should "generate first page" in {
+
+    val formModel: FormModel[FullyExpanded] = getFormModel(allSections)
+    val singleton: Singleton[FullyExpanded] = ???
+
     val generatedHtml = testService
       .renderSection(
         Some(accessCode),
@@ -108,7 +113,8 @@ class SectionRenderingServiceSpec extends Spec {
         Envelope.empty,
         envelopeId,
         ValidationResult.empty.valid,
-        allSections,
+        formModel,
+        singleton,
         0,
         Nil,
         retrievals,
@@ -134,6 +140,9 @@ class SectionRenderingServiceSpec extends Spec {
   }
 
   "SectionRenderingService" should "set a field to hidden if is onlyShowOnSummary is set to true" in {
+    val formModel: FormModel[FullyExpanded] =
+      getFormModel(allSections.map(sc => sc.updateFields(sc.page.fields.map(f => f.copy(onlyShowOnSummary = true)))))
+    val singleton: Singleton[FullyExpanded] = ???
     val generatedHtml = testService
       .renderSection(
         Some(accessCode),
@@ -152,7 +161,8 @@ class SectionRenderingServiceSpec extends Spec {
         Envelope.empty,
         envelopeId,
         ValidationResult.empty.valid,
-        allSections.map(sc => sc.updateFields(sc.page.fields.map(f => f.copy(onlyShowOnSummary = true)))),
+        formModel,
+        singleton,
         0,
         Nil,
         retrievals,
@@ -179,6 +189,9 @@ class SectionRenderingServiceSpec extends Spec {
     visibleFields should be(List())
   }
   "SectionRenderingService" should "add in progress indicator if it is defined" in {
+    val formModel: FormModel[FullyExpanded] =
+      getFormModel(List(allSections.head.updateProgressIndicator(Some(toSmartString("Progress Indicator")))))
+    val singleton: Singleton[FullyExpanded] = ???
     val generatedHtml = testService
       .renderSection(
         Some(accessCode),
@@ -190,7 +203,8 @@ class SectionRenderingServiceSpec extends Spec {
         Envelope.empty,
         envelopeId,
         ValidationResult.empty.valid,
-        List(allSections.head.updateProgressIndicator(Some(toSmartString("Progress Indicator")))),
+        formModel,
+        singleton,
         0,
         Nil,
         retrievals,
@@ -204,6 +218,8 @@ class SectionRenderingServiceSpec extends Spec {
   }
 
   it should "generate second page" in {
+    val formModel: FormModel[FullyExpanded] = getFormModel(allSections)
+    val singleton: Singleton[FullyExpanded] = ???
     val generatedHtml = testService
       .renderSection(
         Some(accessCode),
@@ -220,7 +236,8 @@ class SectionRenderingServiceSpec extends Spec {
         Envelope.empty,
         envelopeId,
         ValidationResult.empty.valid,
-        allSections,
+        formModel,
+        singleton,
         0,
         Nil,
         retrievals,
@@ -302,6 +319,9 @@ class SectionRenderingServiceSpec extends Spec {
       `section - about you`
     )
 
+    val formModel: FormModel[FullyExpanded] = getFormModel(allSections)
+    val singleton: Singleton[FullyExpanded] = ???
+
     val generatedHtml = testService
       .renderSection(
         Some(accessCode),
@@ -313,7 +333,8 @@ class SectionRenderingServiceSpec extends Spec {
         Envelope.empty,
         envelopeId,
         ValidationResult.empty.valid,
-        allSections,
+        formModel,
+        singleton,
         0,
         Nil,
         retrievals,
@@ -355,6 +376,9 @@ class SectionRenderingServiceSpec extends Spec {
       `section - group`
     )
 
+    val formModel: FormModel[FullyExpanded] = getFormModel(allSections)
+    val singleton: Singleton[FullyExpanded] = ???
+
     val generatedHtml = testService
       .renderSection(
         Some(accessCode),
@@ -366,7 +390,8 @@ class SectionRenderingServiceSpec extends Spec {
         Envelope.empty,
         envelopeId,
         ValidationResult.empty.valid,
-        allSections,
+        formModel,
+        singleton,
         0,
         Nil,
         retrievals,
@@ -401,6 +426,9 @@ class SectionRenderingServiceSpec extends Spec {
       `section - group`
     )
 
+    val formModel: FormModel[FullyExpanded] = getFormModel(allSections)
+    val singleton: Singleton[FullyExpanded] = ???
+
     val generatedHtml = thisTestService
       .renderSection(
         Some(accessCode),
@@ -416,7 +444,8 @@ class SectionRenderingServiceSpec extends Spec {
         Envelope.empty,
         envelopeId,
         ValidationResult.empty.valid,
-        allSections,
+        formModel,
+        singleton,
         0,
         Nil,
         retrievals,

@@ -26,7 +26,8 @@ import uk.gov.hmrc.gform.graph.{ GraphException, Recalculation }
 import uk.gov.hmrc.gform.graph.FormTemplateBuilder._
 import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
 
-class ProcessDataSpec extends FlatSpec with Matchers with GraphSpec with TableDrivenPropertyChecks {
+class ProcessDataSpec
+    extends FlatSpec with Matchers with GraphSpec with TableDrivenPropertyChecks with FormModelSupport {
 
   type EitherEffect[A] = Either[GraphException, A]
 
@@ -64,9 +65,12 @@ class ProcessDataSpec extends FlatSpec with Matchers with GraphSpec with TableDr
       // format: on
     )
 
+    val formModel = getFormModel(sections)
+    val mongoFormModel = getFormModel(mongoSections)
+
     forAll(visibilityIndices) { (input, expectedOuput) ⇒
       val res = processDataService
-        .updateSectionVisits(VariadicFormData.empty, sections, mongoSections, VisitIndex(input))
+        .updateSectionVisits(formModel, mongoFormModel, VisitIndex(input))
       res shouldBe expectedOuput
     }
   }
@@ -101,9 +105,12 @@ class ProcessDataSpec extends FlatSpec with Matchers with GraphSpec with TableDr
       // format: on
     )
 
+    val formModel = getFormModel(sections)
+    val mongoFormModel = getFormModel(mongoSections)
+
     forAll(visibilityIndices) { (input, expectedOuput) ⇒
       val res = processDataService
-        .updateSectionVisits(VariadicFormData.empty, sections, mongoSections, VisitIndex(input))
+        .updateSectionVisits(formModel, mongoFormModel, VisitIndex(input))
       res shouldBe expectedOuput
     }
   }

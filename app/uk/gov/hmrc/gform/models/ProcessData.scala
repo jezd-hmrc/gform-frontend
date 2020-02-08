@@ -42,9 +42,8 @@ case class ProcessData(
 class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
 
   def updateSectionVisits(
-    dataRaw: VariadicFormData,
-    sections: FormModel[FullyExpanded],
-    mongoSections: FormModel[FullyExpanded],
+    formModel: FormModel[FullyExpanded],
+    mongoFormModel: FormModel[FullyExpanded],
     visitsIndex: VisitIndex): Set[Int] = Set.empty[Int] // TODO JoVl
   /* visitsIndex.visitsIndex
    *   .map { index =>
@@ -100,7 +99,7 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
         obligations,
         FormDataRecalculated.clearTaxResponses)
 
-      val newVisitIndex = updateSectionVisits(dataRaw, formModel, mongoFormModel, cache.form.visitsIndex)
+      val newVisitIndex = updateSectionVisits(formModel, mongoFormModel, cache.form.visitsIndex)
 
       ProcessData(dataUpd, formModel, VisitIndex(newVisitIndex), obligations)
     }

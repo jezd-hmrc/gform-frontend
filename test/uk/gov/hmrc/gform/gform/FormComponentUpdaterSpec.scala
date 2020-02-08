@@ -81,6 +81,6 @@ class FormComponentUpdaterSpec extends Spec {
   private def updateSection(formComponent: FormComponent) = {
     val section = mkSection(List(mkFormComponent("choice", Value)))
 
-    FormComponentUpdater(formComponent, 11, section).updated
+    new FormComponentUpdater(formComponent, 11, section.page.fields.map(_.id)).updated
   }
 }

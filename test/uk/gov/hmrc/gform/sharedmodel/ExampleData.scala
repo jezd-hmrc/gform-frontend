@@ -26,8 +26,9 @@ import uk.gov.hmrc.gform.auth.models.{ AuthenticatedRetrievals, UserDetails }
 import uk.gov.hmrc.gform.config.{ AuthModule, FrontendAppConfig, JSConfig }
 import uk.gov.hmrc.gform.fileupload.Envelope
 import uk.gov.hmrc.gform.graph.RecData
+import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.sharedmodel.form._
-import uk.gov.hmrc.gform.sharedmodel.formtemplate._
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FullyExpanded, _ }
 import uk.gov.hmrc.gform.Helpers.{ toLocalisedString, toSmartString }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.destinations.Destination.HmrcDms
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.destinations.DestinationId
@@ -348,6 +349,7 @@ trait ExampleSection { dependecies: ExampleFieldId with ExampleFieldValue =>
     )
 
   def allSections = List(`section - about you`, `section - businessDetails`)
+
 }
 
 trait ExampleSectionNumber {

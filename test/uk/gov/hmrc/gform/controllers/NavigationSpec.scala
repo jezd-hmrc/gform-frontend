@@ -19,6 +19,7 @@ package uk.gov.hmrc.gform.controllers
 import cats.instances.option._
 import uk.gov.hmrc.gform.Helpers.toSmartString
 import uk.gov.hmrc.gform.graph.{ GraphException, Recalculation }
+import uk.gov.hmrc.gform.models.{ FormModel, FormModelSupport }
 import uk.gov.hmrc.gform.sharedmodel.{ ExampleData, SmartString, VariadicFormData, VariadicValue }
 import uk.gov.hmrc.gform.sharedmodel.form.ThirdPartyData
 import uk.gov.hmrc.gform.{ GraphSpec, Spec }
@@ -27,7 +28,7 @@ import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, FormDataRecalculated }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.http.HeaderCarrier
 
-class NavitagionSpec extends Spec with GraphSpec {
+class NavitagionSpec extends Spec with GraphSpec with FormModelSupport {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
@@ -71,7 +72,7 @@ class NavitagionSpec extends Spec with GraphSpec {
       EnvelopeId("")
     )
     new Navigation {
-      val sections: List[Section] = sectionsData
+      val formModel: FormModel[FullyExpanded] = getFormModel(sectionsData)
       val data: FormDataRecalculated = res.get
     }.availableSectionNumbers
   }

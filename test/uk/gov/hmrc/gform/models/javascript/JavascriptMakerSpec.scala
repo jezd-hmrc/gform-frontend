@@ -25,7 +25,8 @@ import uk.gov.hmrc.gform.auth.models.Role
 import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.graph.FormTemplateBuilder._
 import uk.gov.hmrc.gform.graph.{ GraphException, Recalculation }
-import uk.gov.hmrc.gform.models.ProcessDataService
+import uk.gov.hmrc.gform.models.{ FormModel, ProcessDataService }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.FullyExpanded
 import uk.gov.hmrc.gform.sharedmodel.{ ExampleData, VariadicFormData }
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.Section
@@ -44,13 +45,15 @@ class JavascriptMakerSpec extends Spec with GraphSpec {
   private def javascript(formTemplate: FormTemplate, sectionNumber: SectionNumber): String = {
     implicit val hc: HeaderCarrier = HeaderCarrier()
     val data: VariadicFormData = VariadicFormData.empty
-    val cache: AuthCacheWithForm = AuthCacheWithForm(ExampleData.materialisedRetrievals, ExampleData.form, formTemplate, Role.Customer)
-    val result: EitherEffect[(FormDataRecalculated, List[Section])] = processDataService.recalculateDataAndSections(data, cache)
+    val cache: AuthCacheWithForm =
+      AuthCacheWithForm(ExampleData.materialisedRetrievals, ExampleData.form, formTemplate, Role.Customer)
+    val result: EitherEffect[(FormDataRecalculated, FormModel[FullyExpanded])] =
+      processDataService.recalculateDataAndSections(data, cache)
 
-    val dynamicSections
-      : List[Section] = result.right.get._2 // What a shame to do this unsafe '.get', but it is ok, since this code is not under the test.
+    val formModel
+      : FormModel[FullyExpanded] = result.right.get._2 // What a shame to do this unsafe '.get', but it is ok, since this code is not under the test.
 
-    JavascriptMaker.generateJs(sectionNumber, dynamicSections, cache.formTemplate)
+    JavascriptMaker.generateJs(sectionNumber, formModel, cache.formTemplate)
   }
 
   "Generated javascript" should "handle revealing choice" in {

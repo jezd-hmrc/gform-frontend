@@ -20,53 +20,60 @@ import org.scalatest.mockito.MockitoSugar.mock
 import uk.gov.hmrc.gform.Spec
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.graph.RecData
+import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.sharedmodel.ExampleData
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponentId, IncludeIf, IsFalse }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponentId, IncludeIf, IsFalse, Section }
 import uk.gov.hmrc.gform.sharedmodel.graph.IncludeIfGN
-
-import scala.collection.immutable.List
 
 class SaveSpec extends Spec {
 
   behavior of "navigate - Save"
 
+  private def mkFormModel(sections: List[Section], formDataRecalculated: FormDataRecalculated) = // TODO JoVl move to FormModelSupport
+    FormModel.expand(formTemplate.copy(sections = allSections), formDataRecalculated)
+
   it should "all sections are included" in new Fixture {
     override def data = super.data + (`fieldId - save` -> `formField - Save`)
-    new Navigator(sectionNumber0, allSections, formDataRecalculated).navigate shouldBe SaveAndExit
-    new Navigator(sectionNumber1, allSections, formDataRecalculated).navigate shouldBe SaveAndExit
-    new Navigator(sectionNumber2, allSections, formDataRecalculated).navigate shouldBe SaveAndExit
+    val formModel = mkFormModel(allSections, formDataRecalculated)
+    new Navigator(sectionNumber0, formModel, formDataRecalculated).navigate shouldBe SaveAndExit
+    new Navigator(sectionNumber1, formModel, formDataRecalculated).navigate shouldBe SaveAndExit
+    new Navigator(sectionNumber2, formModel, formDataRecalculated).navigate shouldBe SaveAndExit
   }
 
   it should "mid section is excluded" in new FixtureExcludedMidSection {
     override def data = super.data + (`fieldId - save` -> `formField - Save`)
-    new Navigator(sectionNumber0, allSections, formDataRecalculated).navigate shouldBe SaveAndExit
-    new Navigator(sectionNumber1, allSections, formDataRecalculated).navigate shouldBe SaveAndExit
-    new Navigator(sectionNumber2, allSections, formDataRecalculated).navigate shouldBe SaveAndExit
+    val formModel = mkFormModel(allSections, formDataRecalculated)
+    new Navigator(sectionNumber0, formModel, formDataRecalculated).navigate shouldBe SaveAndExit
+    new Navigator(sectionNumber1, formModel, formDataRecalculated).navigate shouldBe SaveAndExit
+    new Navigator(sectionNumber2, formModel, formDataRecalculated).navigate shouldBe SaveAndExit
   }
 
   behavior of "navigate - Back"
 
   it should "all sections are included" in new Fixture {
     override def data = super.data + (`fieldId - save` -> `formField - Back`)
-    new Navigator(sectionNumber0, allSections, formDataRecalculated).navigate shouldBe Back(sectionNumber0)
-    new Navigator(sectionNumber1, allSections, formDataRecalculated).navigate shouldBe Back(sectionNumber0)
-    new Navigator(sectionNumber2, allSections, formDataRecalculated).navigate shouldBe Back(sectionNumber1)
+    val formModel = mkFormModel(allSections, formDataRecalculated)
+    new Navigator(sectionNumber0, formModel, formDataRecalculated).navigate shouldBe Back(sectionNumber0)
+    new Navigator(sectionNumber1, formModel, formDataRecalculated).navigate shouldBe Back(sectionNumber0)
+    new Navigator(sectionNumber2, formModel, formDataRecalculated).navigate shouldBe Back(sectionNumber1)
 
   }
 
   it should "mid section is excluded" in new FixtureExcludedMidSection {
     override def data = super.data + (`fieldId - save` -> `formField - Back`)
-    new Navigator(sectionNumber0, allSections, formDataRecalculated).navigate shouldBe Back(sectionNumber0)
-    new Navigator(sectionNumber1, allSections, formDataRecalculated).navigate shouldBe Back(sectionNumber0)
-    new Navigator(sectionNumber2, allSections, formDataRecalculated).navigate shouldBe Back(sectionNumber0)
+    val formModel = mkFormModel(allSections, formDataRecalculated)
+    new Navigator(sectionNumber0, formModel, formDataRecalculated).navigate shouldBe Back(sectionNumber0)
+    new Navigator(sectionNumber1, formModel, formDataRecalculated).navigate shouldBe Back(sectionNumber0)
+    new Navigator(sectionNumber2, formModel, formDataRecalculated).navigate shouldBe Back(sectionNumber0)
   }
 
   behavior of "new Navigator"
 
   it should "throw exception if section numbers are out of bounds" in new Fixture {
-    an[IllegalArgumentException] shouldBe thrownBy(new Navigator(`sectionNumber-1`, allSections, formDataRecalculated))
-    an[IllegalArgumentException] shouldBe thrownBy(new Navigator(sectionNumber3, allSections, formDataRecalculated))
+    val formModel = mkFormModel(allSections, formDataRecalculated)
+    an[IllegalArgumentException] shouldBe thrownBy(new Navigator(`sectionNumber-1`, formModel, formDataRecalculated))
+    an[IllegalArgumentException] shouldBe thrownBy(new Navigator(sectionNumber3, formModel, formDataRecalculated))
   }
 
   trait Fixture extends ExampleData {

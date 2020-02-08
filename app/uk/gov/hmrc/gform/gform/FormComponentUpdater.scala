@@ -67,5 +67,5 @@ object FormComponentUpdater {
   def apply(formComponent: FormComponent, index: Int, group: Group) =
     new FormComponentUpdater(formComponent, index, group.fields.map(_.id))
   /* def apply(formComponent: FormComponent, index: Int, section: Section) =
- *   new FormComponentUpdater(formComponent, index, section.fields.map(_.id)) */
+   *   new FormComponentUpdater(formComponent, index, section.fields.map(_.id)) */ //TODO JoVl why is this not needed? It is called in Spec
 }

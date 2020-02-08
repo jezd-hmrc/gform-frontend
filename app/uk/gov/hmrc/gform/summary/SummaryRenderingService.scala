@@ -372,13 +372,14 @@ object SummaryRenderingService {
         fieldValue.presentationHint
           .fold(false)(x => x.contains(InvisibleInSummary))
 
-      val singletonsToRender: List[(Singleton[FullyExpanded], Int)] = formModel.visibleWithIndex(data).collect {
-        case (s: Singleton[_], i) => (s, i)
-      }
+      val singletonsToRender: List[(Singleton[FullyExpanded], SectionNumber)] =
+        formModel.visibleWithIndex(data).collect {
+          case (s: Singleton[_], i) => (s, i)
+        }
 
       singletonsToRender
         .flatMap {
-          case (singleton, index) =>
+          case (singleton, sectionNumber) =>
             val page = singleton.page
             val sectionTitle4Ga = sectionTitle4GaFactory(page.title.value)
             val shortNameOrTitle = page.shortName.getOrElse(page.title).value
@@ -389,13 +390,7 @@ object SummaryRenderingService {
               page.fields
                 .filterNot(showOnSummary)
                 .map(
-                  valueToHtml(
-                    _,
-                    formTemplate._id,
-                    maybeAccessCode,
-                    shortNameOrTitle,
-                    SectionNumber(index),
-                    sectionTitle4Ga))
+                  valueToHtml(_, formTemplate._id, maybeAccessCode, shortNameOrTitle, sectionNumber, sectionTitle4Ga))
             begin +: middle :+ end
         }
 

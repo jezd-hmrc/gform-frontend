@@ -28,11 +28,12 @@ import uk.gov.hmrc.gform.graph.FormTemplateBuilder._
 import uk.gov.hmrc.gform.lookup.LookupExtractors
 import uk.gov.hmrc.gform.models.helpers.Fields
 import uk.gov.hmrc.gform.sharedmodel.VariadicValue.{ Many, One }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.FullyExpanded
 import uk.gov.hmrc.gform.sharedmodel.{ VariadicFormData, VariadicValue }
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 
-class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks {
+class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks with FormModelSupport {
 
   private val lookupExtractors = new LookupExtractors(Map.empty)
 
@@ -502,7 +503,9 @@ class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks {
 
     val data = mkFormDataRecalculatedUsingUpperCaseFormComponentIdForValue("a")
 
-    val res = getAlwaysEmptyHiddenGroup(data, section, lookupExtractors)
+    val singleton = getSingleton(section, data)
+
+    val res = getAlwaysEmptyHiddenGroup(data, singleton, lookupExtractors)
 
     res shouldBe empty
   }
@@ -517,7 +520,9 @@ class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks {
 
     val data = FormDataRecalculated.empty
 
-    val res = getAlwaysEmptyHiddenGroup(data, section, lookupExtractors)
+    val singleton = getSingleton(section, data)
+
+    val res = getAlwaysEmptyHiddenGroup(data, singleton, lookupExtractors)
 
     val expectedChoice = "a" :: Nil map (id => mkFormComponent(FormComponentId(id), choice))
 
@@ -535,7 +540,9 @@ class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks {
 
     val data = mkFormDataRecalculatedUsingUpperCaseFormComponentIdForValue("a")
 
-    val res = getAlwaysEmptyHiddenGroup(data, section, lookupExtractors)
+    val singleton = getSingleton(section, data)
+
+    val res = getAlwaysEmptyHiddenGroup(data, singleton, lookupExtractors)
 
     val expectedChoice = "a" :: Nil map (id => mkFormComponent(FormComponentId(id), choice))
 
@@ -553,7 +560,9 @@ class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks {
 
     val data = mkFormDataRecalculatedUsingUpperCaseFormComponentIdForValue("a", "1_a", "2_a")
 
-    val res = getAlwaysEmptyHiddenGroup(data, section, lookupExtractors)
+    val singleton = getSingleton(section, data)
+
+    val res = getAlwaysEmptyHiddenGroup(data, singleton, lookupExtractors)
 
     val expectedChoice = "a" :: "1_a" :: "2_a" :: Nil map (id => mkFormComponent(FormComponentId(id), choice))
 
@@ -572,7 +581,9 @@ class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks {
 
     val data = mkFormDataRecalculatedUsingUpperCaseFormComponentIdForValue("a", "b")
 
-    val res = getAlwaysEmptyHiddenGroup(data, section, lookupExtractors)
+    val singleton = getSingleton(section, data)
+
+    val res = getAlwaysEmptyHiddenGroup(data, singleton, lookupExtractors)
 
     val expectedChoice = "a" :: "b" :: Nil map (id => mkFormComponent(FormComponentId(id), choice))
 
@@ -592,7 +603,9 @@ class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks {
 
     val data = mkFormDataRecalculatedUsingUpperCaseFormComponentIdForValue("a", "b", "c", "1_a", "1_b", "1_c")
 
-    val res = getAlwaysEmptyHiddenGroup(data, section, lookupExtractors)
+    val singleton = getSingleton(section, data)
+
+    val res = getAlwaysEmptyHiddenGroup(data, singleton, lookupExtractors)
 
     val expectedChoice = "a" :: "b" :: "1_a" :: "1_b" :: Nil map (id => mkFormComponent(FormComponentId(id), choice))
 
@@ -614,7 +627,9 @@ class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks {
     val data =
       mkFormDataRecalculatedUsingUpperCaseFormComponentIdForValue("a", "b", "c", "d", "1_a", "1_b", "1_c", "1_d")
 
-    val emptyHidden = getAlwaysEmptyHiddenGroup(data, section, lookupExtractors)
+    val singleton = getSingleton(section, data)
+
+    val emptyHidden = getAlwaysEmptyHiddenGroup(data, singleton, lookupExtractors)
 
     val expectedChoice = "a" :: "1_a" :: Nil map (id => mkFormComponent(FormComponentId(id), choice))
     val expectedInfo = "b" :: "1_b" :: Nil map (id => mkFormComponent(FormComponentId(id), informationMessage))
@@ -639,7 +654,10 @@ class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks {
 
     val data = mkFormDataRecalculatedUsingUpperCaseFormComponentIdForValue("a", "b", "c", "1_a", "1_b", "1_c", "e", "f")
 
-    val (hiddenFormComponent, dataUpd) = Fields.getHiddenTemplateFields(section, sections, data, lookupExtractors)
+    val singleton = getSingleton(section, data)
+    val formModel = getFormModel(sections, data)
+
+    val (hiddenFormComponent, dataUpd) = Fields.getHiddenTemplateFields(singleton, formModel, data, lookupExtractors)
 
     val expectedFC = List(
       "e"   -> Text(BasicText, Value),
@@ -674,7 +692,10 @@ class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks {
 
     val data = mkFormDataRecalculatedUsingUpperCaseFormComponentIdForValue("a", "b", "c")
 
-    val (hiddenFormComponent, dataUpd) = Fields.getHiddenTemplateFields(section, sections, data, lookupExtractors)
+    val singleton = getSingleton(section, data)
+    val formModel = getFormModel(sections, data)
+
+    val (hiddenFormComponent, dataUpd) = Fields.getHiddenTemplateFields(singleton, formModel, data, lookupExtractors)
 
     val expectedData = mkVariadicFormDataRecalculated(
       "a" -> Many(Seq()),
@@ -702,12 +723,13 @@ class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks {
     val fileUploadInAGroup = mkFormComponent(FormComponentId("dummy"), group)
 
     val section = mkSection(text :: fileUploadOutsideOfGroup :: fileUploadInAGroup :: Nil)
-    val res = hiddenFileUploads(section)
+    val singleton = getSingleton(section)
+    val res = hiddenFileUploads(singleton)
 
     res shouldBe List(fileUploadOutsideOfGroup)
   }
 
-  private def mkSectionWithGroupHaving(xs: List[(String, ComponentType)]): Section = {
+  private def mkSectionWithGroupHaving(xs: List[(String, ComponentType)]): Section.NonRepeatingPage = {
     val fields = xs.map { case (id, comp) => mkFormComponent(FormComponentId(id), comp) }
 
     val group = mkGroupWith(fields)
