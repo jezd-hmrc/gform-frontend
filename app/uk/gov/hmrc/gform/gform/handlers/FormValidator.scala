@@ -20,7 +20,7 @@ import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.controllers.{ AuthCacheWithForm, Origin }
 import uk.gov.hmrc.gform.fileupload.Envelope
 import uk.gov.hmrc.gform.models.ExpandUtils.{ nonSubmittedFCsOfNonGroup, submittedFCs }
-import uk.gov.hmrc.gform.models.ProcessData
+import uk.gov.hmrc.gform.models.{ FormModel, ProcessData }
 import uk.gov.hmrc.gform.models.gform.{ FormComponentValidation, FormValidationOutcome }
 import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, FormDataRecalculated, ThirdPartyData, ValidationResult }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
@@ -34,7 +34,7 @@ class FormValidator(implicit ec: ExecutionContext) {
 
   def validateForm(
     data: FormDataRecalculated,
-    sections: List[Section],
+    formModel: FormModel[FullyExpanded],
     sn: SectionNumber,
     cache: AuthCacheWithForm,
     envelope: Envelope,
@@ -48,7 +48,7 @@ class FormValidator(implicit ec: ExecutionContext) {
   ): Future[FormValidationOutcome] =
     validate(
       data,
-      sections,
+      formModel,
       sn,
       cache.form.envelopeId,
       envelope,
@@ -68,7 +68,7 @@ class FormValidator(implicit ec: ExecutionContext) {
 
   def validate(
     formDataRecalculated: FormDataRecalculated,
-    sections: List[Section],
+    formModel: FormModel[FullyExpanded],
     sectionNumber: SectionNumber,
     envelopeId: EnvelopeId,
     envelope: Envelope,
@@ -80,22 +80,28 @@ class FormValidator(implicit ec: ExecutionContext) {
   )(
     implicit hc: HeaderCarrier
   ): Future[(List[(FormComponent, FormFieldValidationResult)], ValidatedType[ValidationResult], Envelope)] = {
-    val section = sections(sectionNumber.value)
-    val nonSubmittedYet = nonSubmittedFCsOfNonGroup(formDataRecalculated, section)
-    val allFC = submittedFCs(formDataRecalculated, sections.flatMap(_.expandSection(formDataRecalculated.data).allFCs)) ++ nonSubmittedYet
-    val sectionFields = submittedFCs(formDataRecalculated, section.expandSectionRc(formDataRecalculated.data).allFCs) ++ nonSubmittedYet
+    val pageModel = formModel(sectionNumber)
+    val nonSubmittedYet = nonSubmittedFCsOfNonGroup(formDataRecalculated, pageModel)
+    //val allFC = submittedFCs(formDataRecalculated, formModel.flatMap(_.expandSection(formDataRecalculated.data).allFCs)) ++ nonSubmittedYet
+    val allFC: List[FormComponent] = submittedFCs(
+      formDataRecalculated,
+      formModel.expand(formDataRecalculated).allFormComponents) ++ nonSubmittedYet
+    //val sectionFields = submittedFCs(formDataRecalculated, section.expandSectionRc(formDataRecalculated.data).allFCs) ++ nonSubmittedYet
+    val sectionFields: List[FormComponent] = submittedFCs(
+      formDataRecalculated,
+      pageModel.expandSectionRc(formDataRecalculated).allFCs) ++ nonSubmittedYet
 
     for {
       v <- validateFormComponents(
             sectionFields,
-            section,
+            pageModel,
             envelopeId,
             envelope,
             retrievals,
             thirdPartyData,
             formTemplate,
             formDataRecalculated,
-            GetEmailCodeFieldMatcher(sections))
+            GetEmailCodeFieldMatcher(formModel))
     } yield (evaluateValidation(v, allFC, formDataRecalculated, envelope), v, envelope)
   }
 
@@ -111,12 +117,12 @@ class FormValidator(implicit ec: ExecutionContext) {
     implicit hc: HeaderCarrier
   ): Future[Option[SectionNumber]] = {
 
-    val sections: List[Section] = processData.sections
+    val formModel: FormModel[FullyExpanded] = processData.formModel
     val data = processData.data
 
-    val availableSectionNumbers: List[SectionNumber] = Origin(sections, data).availableSectionNumbers
-    println("sections: ")
-    sections.foreach(println)
+    val availableSectionNumbers: List[SectionNumber] = Origin(formModel, data).availableSectionNumbers
+    println("formModel.pages: ")
+    formModel.pages.foreach(println)
     println("data: " + data)
     println("availableSectionNumbers: " + (availableSectionNumbers))
     availableSectionNumbers.foldLeft(Future.successful(None: Option[SectionNumber])) {
@@ -126,7 +132,7 @@ class FormValidator(implicit ec: ExecutionContext) {
           case None =>
             validateForm(
               data,
-              sections,
+              formModel,
               currentSn,
               cache,
               envelope,
@@ -135,10 +141,10 @@ class FormValidator(implicit ec: ExecutionContext) {
               evaluateValidation)
               .map {
                 case FormValidationOutcome(isValid, _, _) =>
-                  val section = sections(currentSn.value)
+                  val page = formModel(currentSn)
                   val hasBeenVisited = processData.visitsIndex.contains(currentSn.value)
 
-                  val stop = section.isTerminationPage || !hasBeenVisited
+                  val stop = page.isTerminationPage || !hasBeenVisited
                   if (isValid && !stop) None else Some(currentSn)
               }
         }

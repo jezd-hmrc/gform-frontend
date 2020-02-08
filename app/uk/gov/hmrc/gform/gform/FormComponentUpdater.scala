@@ -66,6 +66,6 @@ class FormComponentUpdater(formComponent: FormComponent, index: Int, baseIds: Li
 object FormComponentUpdater {
   def apply(formComponent: FormComponent, index: Int, group: Group) =
     new FormComponentUpdater(formComponent, index, group.fields.map(_.id))
-  def apply(formComponent: FormComponent, index: Int, section: Section) =
-    new FormComponentUpdater(formComponent, index, section.fields.map(_.id))
+  /* def apply(formComponent: FormComponent, index: Int, section: Section) =
+ *   new FormComponentUpdater(formComponent, index, section.fields.map(_.id)) */
 }

@@ -17,21 +17,21 @@
 package uk.gov.hmrc.gform.models.javascript
 
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
+import uk.gov.hmrc.gform.models.{ FormModel, PageModel }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.gform.sharedmodel.graph.{ DependencyGraph, GraphNode, SimpleGN }
 
 object JavascriptMaker {
 
-  def generateJs(sectionNumber: SectionNumber, dynamicSections: List[Section], formTemplate: FormTemplate): String = {
-    val section = dynamicSections(sectionNumber.value)
-    val jsFormComponentModels = section.jsFormComponentModels
-    val allAtomicFields = dynamicSections.flatMap(RepeatingComponentService.atomicFieldsFull)
+  def generateJs(
+    sectionNumber: SectionNumber,
+    formModel: FormModel[FullyExpanded],
+    formTemplate: FormTemplate): String = {
+    val pageModel = formModel(sectionNumber)
+    val jsFormComponentModels = pageModel.jsFormComponentModels
+    val allAtomicFields = formModel.expandFull.allFormComponents //flatMap(RepeatingComponentService.atomicFieldsFull)
 
-    createJavascript(
-      dynamicSections.flatMap(_.fields),
-      jsFormComponentModels,
-      allAtomicFields,
-      mkDependencies(formTemplate))
+    createJavascript(pageModel, jsFormComponentModels, allAtomicFields, mkDependencies(formTemplate))
 
   }
 
@@ -60,16 +60,18 @@ object JavascriptMaker {
   }
 
   private def createJavascript(
-    fieldList: List[FormComponent],
+    pageModel: PageModel[FullyExpanded],
     jsFormComponentModels: List[JsFormComponentModel],
     allAtomicFields: List[FormComponent],
     dependencies: Dependencies): String = {
-    val groups: List[(FormComponentId, Group)] = fieldList
+    val groups: List[(FormComponentId, Group)] = pageModel
+      .fold(_.page.fields)(_ => Nil)
       .filter(_.presentationHint.getOrElse(Nil).contains(CollapseGroupUnderLabel))
       .collect {
         case fc @ IsGroup(group) => (fc.id, group)
       }
 
+    // includeIf-CollapsingGroupWithSum.json
     val repeatFormComponentIds = RepeatingComponentService.getRepeatFormComponentIds(allAtomicFields)
 
     groups.map((Javascript.collapsingGroupJavascript _).tupled).mkString("\n") +

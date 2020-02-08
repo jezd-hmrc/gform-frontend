@@ -158,22 +158,22 @@ object VariadicFormData {
       }
     )
 
-  def listVariadicFormComponentIds(template: FormTemplate): Set[FormComponentId] = {
-    val acknowledgementSectionFields = template.destinations match {
-      case destinationList: DestinationList =>
-        listVariadicFormComponentIds(destinationList.acknowledgementSection.fields)
-      case _ => Set.empty
-    }
+  def listVariadicFormComponentIds(template: FormTemplate): Set[FormComponentId] = ??? /* { // TODO JoVl
+   *   val acknowledgementSectionFields = template.destinations match {
+   *     case destinationList: DestinationList =>
+   *       listVariadicFormComponentIds(destinationList.acknowledgementSection.fields)
+   *     case _ => Set.empty
+   *   }
+   *
+   *   acknowledgementSectionFields ++ listVariadicFormComponentIds(template.declarationSection.fields) ++
+   *     template.sections.foldMap {
+   *       case s: NonRepeatingPage => listVariadicFormComponentIds(s.page)
+   *       case s: RepeatingPage    => listVariadicFormComponentIds(s.page)
+   *       case s: AddToList        => s.pages.foldMap(listVariadicFormComponentIds)
+   *     }
+   * } */
 
-    acknowledgementSectionFields ++ listVariadicFormComponentIds(template.declarationSection.fields) ++
-      template.sections.foldMap {
-        case s: NonRepeatingPage => listVariadicFormComponentIds(s.page)
-        case s: RepeatingPage    => listVariadicFormComponentIds(s.page)
-        case s: AddToList        => s.pages.foldMap(listVariadicFormComponentIds)
-      }
-  }
-
-  def listVariadicFormComponentIds(page: Page): Set[FormComponentId] =
+  def listVariadicFormComponentIds(page: Page[FullyExpanded]): Set[FormComponentId] =
     page.fields.flatMap(listVariadicFormComponentIds).toSet
 
   def listVariadicFormComponentIds(component: FormComponent): Set[FormComponentId] =

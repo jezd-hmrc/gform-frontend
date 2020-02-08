@@ -26,7 +26,7 @@ import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.graph.{ RecData, Recalculation }
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.sharedmodel.form.{ FormDataRecalculated, VisitIndex }
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponentId, Section }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponentId, FullyExpanded, Section }
 import uk.gov.hmrc.gform.sharedmodel._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.gform.models.gform.ObligationsAction
@@ -35,7 +35,7 @@ import scala.util.Try
 
 case class ProcessData(
   data: FormDataRecalculated,
-  sections: List[Section],
+  formModel: FormModel[FullyExpanded],
   visitsIndex: VisitIndex,
   obligations: Obligations)
 
@@ -43,21 +43,21 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
 
   def updateSectionVisits(
     dataRaw: VariadicFormData,
-    sections: FormModel[DataDriven],
-    mongoSections: FormModel[DataDriven],
-    visitsIndex: VisitIndex): Set[Int] =
-    visitsIndex.visitsIndex
-      .map { index =>
-        Try(mongoSections(index)).toOption.fold(-1) { section =>
-          section.fields.headOption.fold(-1) { mongoHead =>
-            val firstComponentId = mongoHead.id
-            sections.indexWhere { s =>
-              s.fields.headOption.fold(false)(_.id === firstComponentId)
-            }
-          }
-        }
-      }
-      .filterNot(_ === -1)
+    sections: FormModel[FullyExpanded],
+    mongoSections: FormModel[FullyExpanded],
+    visitsIndex: VisitIndex): Set[Int] = Set.empty[Int] // TODO JoVl
+  /* visitsIndex.visitsIndex
+   *   .map { index =>
+   *     Try(mongoSections(index)).toOption.fold(-1) { section =>
+   *       section.fields.headOption.fold(-1) { mongoHead =>
+   *         val firstComponentId = mongoHead.id
+   *         sections.indexWhere { s =>
+   *           s.fields.headOption.fold(false)(_.id === firstComponentId)
+   *         }
+   *       }
+   *     }
+   *   }
+   *   .filterNot(_ === -1) */
 
   def hmrcTaxPeriodWithId(recData: RecData): Option[NonEmptyList[HmrcTaxPeriodWithEvaluatedId]] =
     recData.recalculatedTaxPeriod.map {
@@ -108,7 +108,7 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
   def recalculateDataAndSections(data: VariadicFormData, cache: AuthCacheWithForm)(
     implicit hc: HeaderCarrier,
     me: MonadError[F, E]
-  ): F[(FormDataRecalculated, FormModel[DataDriven])] =
+  ): F[(FormDataRecalculated, FormModel[FullyExpanded])] =
     for {
       formDataRecalculated <- recalculation
                                .recalculateFormData(
@@ -118,7 +118,7 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
                                  cache.form.thirdPartyData,
                                  cache.form.envelopeId)
     } yield {
-      val formModel = RepeatingComponentService.formModel(cache.formTemplate, formDataRecalculated)
+      val formModel = FormModel.expand(cache.formTemplate, formDataRecalculated)
       (formDataRecalculated, formModel)
     }
 

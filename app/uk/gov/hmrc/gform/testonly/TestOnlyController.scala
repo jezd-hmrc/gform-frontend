@@ -38,10 +38,11 @@ import uk.gov.hmrc.gform.gform.{ CustomerId, FrontEndSubmissionVariablesBuilder,
 import uk.gov.hmrc.gform.gformbackend.GformConnector
 import uk.gov.hmrc.gform.graph.CustomerIdRecalculation
 import uk.gov.hmrc.gform.lookup.LookupRegistry
+import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, AffinityGroupUtil, LangADT, PdfHtml, SubmissionData }
 import uk.gov.hmrc.gform.sharedmodel.form.Form
 import uk.gov.hmrc.gform.sharedmodel.form.FormId
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ EmailParametersRecalculated, FormTemplate, FormTemplateId }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ EmailParametersRecalculated, FormTemplate, FormTemplateId, FullyExpanded }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.destinations.DestinationId
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.controller.FrontendController
@@ -96,10 +97,11 @@ class TestOnlyController(
   ) =
     auth.async(formTemplateId, maybeAccessCode) { implicit request => implicit lang => cache => _ =>
       import cache._
+      val formModel = FormModel.fromCache(cache)
       withHandlebarPayload {
         for {
           customerId <- fromFutureA(customerIdRecalculation.evaluateCustomerId(cache))
-          res        <- fetchHandlebarPayload(form, formTemplate, customerId, destinationId, retrievals)
+          res        <- fetchHandlebarPayload(form, formTemplate, formModel, customerId, destinationId, retrievals)
         } yield res
       }
     }
@@ -114,10 +116,13 @@ class TestOnlyController(
   private def fetchHandlebarPayload(
     form: Form,
     formTemplate: FormTemplate,
+    formModel: FormModel[FullyExpanded],
     customerId: CustomerId,
     destinationId: DestinationId,
-    retrievals: MaterialisedRetrievals)(
-    implicit l: LangADT,
+    retrievals: MaterialisedRetrievals
+  )(
+    implicit
+    l: LangADT,
     me: MonadError[Future, Throwable],
     hc: HeaderCarrier): EitherT[Future, UnexpectedState, Result] = {
 
@@ -129,10 +134,11 @@ class TestOnlyController(
 
       submissionData = SubmissionData(
         PdfHtml("htmlForPDF"),
-        FrontEndSubmissionVariablesBuilder(retrievals, formTemplate, customerId),
+        FrontEndSubmissionVariablesBuilder(retrievals, formTemplate, formModel, customerId),
         structuredFormData,
         emailParameters,
-        Attachments.empty)
+        Attachments.empty
+      )
 
       httpResponse <- recov(
                        gformConnector

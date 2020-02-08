@@ -32,8 +32,10 @@ import uk.gov.hmrc.gform.gform.{ HtmlSanitiser, SummaryPagePurpose }
 import uk.gov.hmrc.gform.graph.Recalculation
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.models.ExpandUtils._
+import uk.gov.hmrc.gform.models.{ FormModel, Singleton }
 import uk.gov.hmrc.gform.models.helpers.Fields.flattenGroups
 import uk.gov.hmrc.gform.models.helpers.{ Fields, TaxPeriodHelper }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.FullyExpanded
 import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, LangADT, Obligations, PdfHtml, SubmissionRef }
 import uk.gov.hmrc.gform.sharedmodel.form.{ FormDataRecalculated, ValidationResult }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.SectionTitle4Ga.sectionTitle4GaFactory
@@ -226,7 +228,8 @@ object SummaryRenderingService {
     viewHelpers: ViewHelpersAlgebra,
     lise: SmartStringEvaluator): List[Html] = {
 
-    def renderHtmls(sections: List[Section], fields: List[FormComponent])(implicit l: LangADT): List[Html] = {
+    def renderHtmls(formModel: FormModel[FullyExpanded])(implicit l: LangADT): List[Html] = {
+      val fields: List[FormComponent] = formModel.allFormComponents
       def validate(formComponent: FormComponent): Option[FormFieldValidationResult] = {
         val gformErrors = validatedType match {
           case Invalid(errors) => errors
@@ -369,27 +372,28 @@ object SummaryRenderingService {
         fieldValue.presentationHint
           .fold(false)(x => x.contains(InvisibleInSummary))
 
-      val sectionsToRender =
-        sections.zipWithIndex.collect {
-          case (section, index) if data.isVisible(section) => (section, index)
-        }
+      val singletonsToRender: List[(Singleton[FullyExpanded], Int)] = formModel.visibleWithIndex(data).collect {
+        case (s: Singleton[_], i) => (s, i)
+      }
 
-      sectionsToRender
+      singletonsToRender
         .flatMap {
-          case (section, index) =>
-            val sectionTitle4Ga = sectionTitle4GaFactory(sections(index).title.value)
-            val begin = begin_section(section.shortName.getOrElse(section.title).value)
+          case (singleton, index) =>
+            val page = singleton.page
+            val sectionTitle4Ga = sectionTitle4GaFactory(page.title.value)
+            val shortNameOrTitle = page.shortName.getOrElse(page.title).value
+            val begin = begin_section(shortNameOrTitle)
             val end = end_section()
 
             val middle =
-              section.fields
+              page.fields
                 .filterNot(showOnSummary)
                 .map(
                   valueToHtml(
                     _,
                     formTemplate._id,
                     maybeAccessCode,
-                    section.shortName.getOrElse(section.title).value,
+                    shortNameOrTitle,
                     SectionNumber(index),
                     sectionTitle4Ga))
             begin +: middle :+ end
@@ -397,10 +401,10 @@ object SummaryRenderingService {
 
     }
 
-    val sections = RepeatingComponentService.getAllSections(formTemplate, data)
+    val formModel = FormModel.expand(formTemplate, data)
 
-    val fields = sections.flatMap(RepeatingComponentService.atomicFields(_, data.data))
+    //val fields = sections.flatMap(RepeatingComponentService.atomicFields(_, data.data))
 
-    renderHtmls(sections, fields)
+    renderHtmls(formModel)
   }
 }

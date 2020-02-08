@@ -75,8 +75,8 @@ class FastForwardService(
     maybeSectionNumber: Option[SectionNumber])(implicit l: LangADT, sse: SmartStringEvaluator): Result =
     maybeSectionNumber match {
       case Some(sn) =>
-        val section = processData.sections(sn.value)
-        val sectionTitle4Ga = sectionTitle4GaFactory(section.title.value)
+        val pageModel = processData.formModel(sn)
+        val sectionTitle4Ga = sectionTitle4GaFactory(pageModel.title.value)
         Redirect(
           routes.FormController
             .form(cache.formTemplate._id, maybeAccessCode, sn, sectionTitle4Ga, SeYes))

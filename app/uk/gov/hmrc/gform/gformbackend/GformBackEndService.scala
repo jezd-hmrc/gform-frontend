@@ -25,8 +25,9 @@ import uk.gov.hmrc.gform.fileupload.Attachments
 import uk.gov.hmrc.gform.gform.{ CustomerId, FrontEndSubmissionVariablesBuilder, StructuredFormDataBuilder, SummaryPagePurpose }
 import uk.gov.hmrc.gform.graph.{ CustomerIdRecalculation, EmailParameterRecalculation, Recalculation }
 import uk.gov.hmrc.gform.lookup.LookupRegistry
+import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.sharedmodel.form.{ Form, FormIdData, FormStatus, UserData }
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ EmailParametersRecalculated, FormComponentId, FormTemplate, FormTemplateId }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ EmailParametersRecalculated, FormComponentId, FormTemplate, FormTemplateId, FullyExpanded }
 import uk.gov.hmrc.gform.eval.smartstring.SmartStringEvaluator
 import uk.gov.hmrc.gform.sharedmodel.structuredform.StructuredFormValue
 import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, AffinityGroupUtil, BundledFormSubmissionData, LangADT, PdfHtml, SubmissionData }
@@ -92,15 +93,19 @@ class GformBackEndService(
     cache: AuthCacheWithForm,
     maybeAccessCode: Option[AccessCode],
     submissionDetails: Option[SubmissionDetails],
-    attachments: Attachments)(
-    implicit request: Request[_],
+    attachments: Attachments
+  )(
+    implicit
+    request: Request[_],
     l: LangADT,
     hc: HeaderCarrier,
-    lise: SmartStringEvaluator): Future[(HttpResponse, CustomerId)] =
+    lise: SmartStringEvaluator
+  ): Future[(HttpResponse, CustomerId)] =
     for {
       _          <- updateUserData(cache.form.copy(status = formStatus), maybeAccessCode)
       customerId <- customerIdRecalculation.evaluateCustomerId(cache)
-      response   <- handleSubmission(maybeAccessCode, cache, customerId, submissionDetails, attachments)
+      formModel: FormModel[FullyExpanded] = FormModel.fromCache(cache)
+      response <- handleSubmission(maybeAccessCode, cache, customerId, submissionDetails, attachments, formModel)
     } yield (response, customerId)
 
   def forceUpdateFormStatus(formId: FormIdData, status: FormStatus)(implicit hc: HeaderCarrier): Future[Unit] =
@@ -111,8 +116,11 @@ class GformBackEndService(
     cache: AuthCacheWithForm,
     customerId: CustomerId,
     submissionDetails: Option[SubmissionDetails],
-    attachments: Attachments)(
-    implicit request: Request[_],
+    attachments: Attachments,
+    formModel: FormModel[FullyExpanded]
+  )(
+    implicit
+    request: Request[_],
     l: LangADT,
     hc: HeaderCarrier,
     lise: SmartStringEvaluator): Future[HttpResponse] =
@@ -129,7 +137,8 @@ class GformBackEndService(
                    customerId,
                    htmlForPDF,
                    structuredFormData,
-                   attachments
+                   attachments,
+                   formModel
                  )
     } yield response
 
@@ -153,7 +162,8 @@ class GformBackEndService(
     customerId: CustomerId,
     htmlForPDF: PdfHtml,
     structuredFormData: StructuredFormValue.ObjectStructure,
-    attachments: Attachments
+    attachments: Attachments,
+    formModel: FormModel[FullyExpanded]
   )(implicit hc: HeaderCarrier): Future[HttpResponse] =
     gformConnector.submitForm(
       FormIdData(retrievals, formTemplate._id, maybeAccessCode),
@@ -165,7 +175,8 @@ class GformBackEndService(
         formTemplate,
         emailParameters,
         structuredFormData,
-        attachments),
+        attachments,
+        formModel),
       AffinityGroupUtil.fromRetrievals(retrievals)
     )
 
@@ -176,10 +187,12 @@ class GformBackEndService(
     formTemplate: FormTemplate,
     emailParameters: EmailParametersRecalculated,
     structuredFormData: StructuredFormValue.ObjectStructure,
-    attachments: Attachments): SubmissionData =
+    attachments: Attachments,
+    formModel: FormModel[FullyExpanded]
+  ): SubmissionData =
     SubmissionData(
       htmlForPDF,
-      FrontEndSubmissionVariablesBuilder(retrievals, formTemplate, customerId),
+      FrontEndSubmissionVariablesBuilder(retrievals, formTemplate, formModel, customerId),
       structuredFormData,
       emailParameters,
       attachments)

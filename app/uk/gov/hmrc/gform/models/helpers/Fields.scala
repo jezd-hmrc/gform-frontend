@@ -18,8 +18,9 @@ package uk.gov.hmrc.gform.models.helpers
 
 import uk.gov.hmrc.gform.fileupload.Envelope
 import uk.gov.hmrc.gform.lookup.LookupExtractors
+import uk.gov.hmrc.gform.models.{ FormModel, PageModel, Singleton }
 import uk.gov.hmrc.gform.sharedmodel.form.{ FormDataRecalculated, FormField }
-import uk.gov.hmrc.gform.sharedmodel.formtemplate._
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Page, _ }
 import uk.gov.hmrc.gform.validation._
 import uk.gov.hmrc.gform.models.ExpandUtils._
 import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
@@ -161,20 +162,20 @@ object Fields {
   }
 
   def getHiddenTemplateFields(
-    section: Section,
-    dynamicSections: List[Section],
+    singleton: Singleton[FullyExpanded],
+    formModel: FormModel[FullyExpanded],
     data: FormDataRecalculated,
     lookupExtractors: LookupExtractors): (List[FormComponent], FormDataRecalculated) = {
-    val renderList: List[Section] = dynamicSections.filterNot(_ == section)
-    val sectionAtomicFields: List[FormComponent] = renderList.flatMap(_.expandSection(data.data).allFCs)
+    val renderList: List[PageModel[FullyExpanded]] = formModel.pages.filterNot(_ == singleton)
+    val sectionAtomicFields: List[FormComponent] = FormModel(renderList).expand(data).allFormComponents
 
     val submitted = submittedFCs(data, sectionAtomicFields)
-    val alwaysEmptyHiddenGroup = getAlwaysEmptyHiddenGroup(data, section, lookupExtractors)
-    val alwaysEmptyHidden = getAlwaysEmptyHidden(section, lookupExtractors)
-    val hiddenFUs = hiddenFileUploads(section)
+    val alwaysEmptyHiddenGroup = getAlwaysEmptyHiddenGroup(data, singleton, lookupExtractors)
+    val alwaysEmptyHidden = getAlwaysEmptyHidden(singleton, lookupExtractors)
+    val hiddenFUs = hiddenFileUploads(singleton)
 
     val idsToRenderAsEmptyHidden = (alwaysEmptyHiddenGroup ++ alwaysEmptyHidden).map(_.id)
-    val variadicFormComponentIds = VariadicFormData.listVariadicFormComponentIds(section.fields)
+    val variadicFormComponentIds = VariadicFormData.listVariadicFormComponentIds(singleton.page)
 
     val dataUpd = idsToRenderAsEmptyHidden.foldRight(data.data) {
       case (id, acc) =>

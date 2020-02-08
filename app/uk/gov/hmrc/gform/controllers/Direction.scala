@@ -17,17 +17,18 @@
 package uk.gov.hmrc.gform.controllers
 
 import cats.syntax.show._
+import uk.gov.hmrc.gform.models.{ FormModel }
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.http.BadRequestException
 
 trait Navigation {
-  def sections: List[Section]
+  def formModel: FormModel[FullyExpanded]
   def data: FormDataRecalculated
 
   lazy val availableSectionNumbers: List[SectionNumber] = {
-    sections.zipWithIndex.collect {
-      case (section, index) if data.isVisible(section) => SectionNumber(index)
+    formModel.pages.zipWithIndex.collect {
+      case (page, index) if data.isVisible(page) => SectionNumber(index)
     }
   }
 
@@ -35,7 +36,7 @@ trait Navigation {
 }
 
 // TODO: Origin should not be in controllers, but Navigator probably should!
-case class Origin(sections: List[Section], val data: FormDataRecalculated) extends Navigation
+case class Origin(formModel: FormModel[FullyExpanded], val data: FormDataRecalculated) extends Navigation
 
 sealed trait Direction
 
@@ -47,7 +48,7 @@ case class RemoveGroup(idx: Int, groupId: String) extends Direction
 
 case class Navigator(
   sectionNumber: SectionNumber,
-  sections: List[Section],
+  formModel: FormModel[FullyExpanded],
   data: FormDataRecalculated
 ) extends Navigation {
   require(

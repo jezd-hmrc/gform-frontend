@@ -20,10 +20,10 @@ import cats.syntax.validated._
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.fileupload.Envelope
-import uk.gov.hmrc.gform.models.ProcessData
+import uk.gov.hmrc.gform.models.{ FormModel, ProcessData }
 import uk.gov.hmrc.gform.models.gform.{ FormComponentValidation, FormValidationOutcome }
 import uk.gov.hmrc.gform.sharedmodel.form._
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponent, FormTemplate, SeNo, SeYes, Section, SectionNumber, SuppressErrors }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponent, FormTemplate, FullyExpanded, SeNo, SeYes, Section, SectionNumber, SuppressErrors }
 import uk.gov.hmrc.gform.validation.FormFieldValidationResult
 import uk.gov.hmrc.gform.validation.ValidationUtil.ValidatedType
 import uk.gov.hmrc.http.HeaderCarrier
@@ -39,7 +39,7 @@ class FormControllerRequestHandler(formValidator: FormValidator)(implicit ec: Ex
     envelope: Envelope,
     retrievals: MaterialisedRetrievals,
     data: FormDataRecalculated,
-    sections: List[Section],
+    formModel: FormModel[FullyExpanded],
     validateFormComponents: ValidateFormComponents[Future],
     evaluateValidation: EvaluateValidation
   )(implicit hc: HeaderCarrier)
@@ -50,7 +50,7 @@ class FormControllerRequestHandler(formValidator: FormValidator)(implicit ec: Ex
       case SeNo =>
         handleValidate(
           data,
-          sections,
+          formModel,
           sectionNumber,
           cache.form.envelopeId,
           envelope,
@@ -74,7 +74,7 @@ class FormControllerRequestHandler(formValidator: FormValidator)(implicit ec: Ex
     val retrievals = cache.retrievals
 
     for {
-      (data, sections) <- recalculateDataAndSections(cache.variadicFormData, cache)
+      (data, formModel) <- recalculateDataAndSections(cache.variadicFormData, cache)
       (errors, validate, envelope) <- handleSuppressErrors(
                                        sectionNumber,
                                        suppressErrors,
@@ -82,16 +82,16 @@ class FormControllerRequestHandler(formValidator: FormValidator)(implicit ec: Ex
                                        envelope,
                                        retrievals,
                                        data,
-                                       sections,
+                                       formModel,
                                        validateFormComponents,
                                        evaluateValidation
                                      )
-    } yield FormHandlerResult(data, errors, envelope, validate, sections)
+    } yield FormHandlerResult(data, errors, envelope, validate, formModel)
   }
 
   def handleFormValidation(
     data: FormDataRecalculated,
-    sections: List[Section],
+    formModel: FormModel[FullyExpanded],
     sn: SectionNumber,
     cache: AuthCacheWithForm,
     envelope: Envelope,
@@ -105,7 +105,7 @@ class FormControllerRequestHandler(formValidator: FormValidator)(implicit ec: Ex
   ): Future[FormValidationOutcome] =
     formValidator.validateForm(
       data,
-      sections,
+      formModel,
       sn,
       cache,
       envelope,
@@ -134,7 +134,7 @@ class FormControllerRequestHandler(formValidator: FormValidator)(implicit ec: Ex
 
   def handleValidate(
     formDataRecalculated: FormDataRecalculated,
-    sections: List[Section],
+    formModel: FormModel[FullyExpanded],
     sectionNumber: SectionNumber,
     envelopeId: EnvelopeId,
     envelope: Envelope,
@@ -147,7 +147,7 @@ class FormControllerRequestHandler(formValidator: FormValidator)(implicit ec: Ex
   ): Future[(List[(FormComponent, FormFieldValidationResult)], ValidatedType[ValidationResult], Envelope)] =
     formValidator.validate(
       formDataRecalculated,
-      sections,
+      formModel,
       sectionNumber,
       envelopeId,
       envelope,
@@ -163,4 +163,4 @@ case class FormHandlerResult(
   result: List[(FormComponent, FormFieldValidationResult)],
   envelope: Envelope,
   validatedType: ValidatedType[ValidationResult],
-  sections: List[Section])
+  formModel: FormModel[FullyExpanded])

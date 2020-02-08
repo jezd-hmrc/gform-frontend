@@ -59,27 +59,26 @@ class StructuredFormDataBuilder[F[_]](form: Form, template: FormTemplate, lookup
       case destinationList: DestinationList =>
         (
           buildSections,
-          buildBaseSection(destinationList.acknowledgementSection),
-          buildBaseSection(template.declarationSection))
+          buildBaseSection(destinationList.acknowledgementSection.toSection),
+          buildBaseSection(template.declarationSection.toSection))
           .mapN(_ ++ _ ++ _)
       case _ =>
-        (buildSections, buildBaseSection(template.declarationSection))
+        (buildSections, buildBaseSection(template.declarationSection.toSection))
           .mapN(_ ++ _)
     }
 
-  private def buildSections()(implicit l: LangADT): F[List[Field]] = {
-    val fields: List[F[List[Field]]] =
-      for {
-        section <- template.sections
-        field   <- section.fields
-      } yield buildField(field, section.isRepeating)
+  private def buildSections()(implicit l: LangADT): F[List[Field]] =
+    /* val fields: List[F[List[Field]]] =
+     *   for {
+     *     section <- template.sections
+     *     field   <- section.fields
+     *   } yield buildField(field, section.isRepeating)
+     *
+     * fields.flatTraverse(identity) */
+    ??? // TODO JoVl
 
-    fields.flatTraverse(identity)
-
-  }
-
-  def buildBaseSection(section: BaseSection)(implicit l: LangADT): F[List[Field]] =
-    section.fields
+  def buildBaseSection(section: Section.NonRepeatingPage)(implicit l: LangADT): F[List[Field]] =
+    section.page.fields
       .flatTraverse { unstructuredField =>
         buildField(unstructuredField, repeatable = false)
       }
@@ -254,24 +253,25 @@ class StructuredFormDataBuilder[F[_]](form: Form, template: FormTemplate, lookup
     if (multiValue) choicesToArray(value)
     else TextNode(value)
 
-  private def extractMultiChoiceFieldIds(template: FormTemplate): Set[FormComponentId] = {
-    def groupOrNot(field: FormComponent): List[FormComponent] = field.`type` match {
-      case g: Group => g.fields
-      case _        => List(field)
-    }
+  private def extractMultiChoiceFieldIds(template: FormTemplate): Set[FormComponentId] =
+    /* def groupOrNot(field: FormComponent): List[FormComponent] = field.`type` match {
+     *   case g: Group => g.fields
+     *   case _        => List(field)
+     * }
+     *
+     * def multiChoiceFieldId(field: FormComponent): Option[FormComponentId] = field.`type` match {
+     *   case c: Choice if c.`type` === Checkbox => field.id.some
+     *   case _                                  => None
+     * }
+     *
+     * (for {
+     *   section       <- template.sections
+     *   field         <- section.fields
+     *   nonGroupField <- groupOrNot(field)
+     *   id            <- multiChoiceFieldId(nonGroupField)
+     * } yield id).toSet */
 
-    def multiChoiceFieldId(field: FormComponent): Option[FormComponentId] = field.`type` match {
-      case c: Choice if c.`type` === Checkbox => field.id.some
-      case _                                  => None
-    }
-
-    (for {
-      section       <- template.sections
-      field         <- section.fields
-      nonGroupField <- groupOrNot(field)
-      id            <- multiChoiceFieldId(nonGroupField)
-    } yield id).toSet
-  }
+    ??? // TODO JoVl
 
   private def choicesToArray(commaSeparatedString: String): ArrayNode =
     ArrayNode(commaSeparatedString.split(',').map(_.trim).filterNot(_.isEmpty).map(TextNode).toList)

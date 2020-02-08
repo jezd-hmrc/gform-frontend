@@ -27,13 +27,13 @@ case class ExpandedFormTemplate(expandedSection: List[ExpandedSection]) {
   val allFormComponents: List[FormComponent] =
     expandedSection.flatMap(_.expandedFormComponents.flatMap(_.formComponents))
   val allFormComponentIds: List[FormComponentId] = expandedSection.flatMap(_.expandedFormComponents.flatMap(_.allIds))
-  def formComponentsLookup(data: VariadicFormData): Map[FormComponentId, FormComponent] =
-    allFormComponents.flatMap(fc => fc.expandFormComponent(data).allIds.map(_ -> fc)).toMap
+  /* def formComponentsLookup(data: VariadicFormData): Map[FormComponentId, FormComponent] =
+   *   allFormComponents.flatMap(fc => fc.expandFormComponent(data).allIds.map(_ -> fc)).toMap */
   def formComponentsLookupFull: Map[FormComponentId, FormComponent] =
     allFormComponents.flatMap(fc => fc.expandFormComponentFull.allIds.map(_ -> fc)).toMap
-  val allIncludeIfs: List[(List[ExpandedFormComponent], IncludeIf, Int)] = expandedSection.zipWithIndex.collect {
-    case (ExpandedSection(expandedFormComponents, Some(includeIf)), index) => (expandedFormComponents, includeIf, index)
-  }
+  /* val allIncludeIfs: List[(List[ExpandedFormComponent], IncludeIf, Int)] = expandedSection.zipWithIndex.collect {
+ *   case (ExpandedSection(expandedFormComponents, Some(includeIf)), index) => (expandedFormComponents, includeIf, index)
+ * } */
 }
 
 case class FormTemplate(
@@ -57,16 +57,16 @@ case class FormTemplate(
 
   val isSpecimen: Boolean = _id.value.startsWith("specimen-")
 
-  def listAllSections: List[BaseSection] =
-    destinations match {
-      case destinationList: DestinationList =>
-        sections ::: List(declarationSection, destinationList.acknowledgementSection)
-      case _ =>
-        sections :+ declarationSection
-    }
+  /* def listAllSections: List[BaseSection] =
+   *   destinations match {
+   *     case destinationList: DestinationList =>
+   *       sections ::: List(declarationSection, destinationList.acknowledgementSection)
+   *     case _ =>
+   *       sections :+ declarationSection
+   *   } */
 
-  def expandFormTemplate(data: VariadicFormData): ExpandedFormTemplate =
-    ExpandedFormTemplate(sections.map(_.expandSection(data)))
+  /* def expandFormTemplate(data: VariadicFormData): ExpandedFormTemplate =
+   *   ExpandedFormTemplate(sections.map(_.expandSection(data))) */
 
   val expandFormTemplateFull: ExpandedFormTemplate = ExpandedFormTemplate(sections.flatMap(_.expandSectionFull))
 }

@@ -26,18 +26,21 @@ import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 
 object ExpandUtils {
 
-  def nonSubmittedFCsOfNonGroup(data: FormDataRecalculated, section: Section): List[FormComponent] = {
-    val groupFields: List[List[FormComponent]] =
-      section.fields.collect {
-        case IsGroup(group) => group.fields
-      }
+  def nonSubmittedFCsOfNonGroup(data: FormDataRecalculated, pageModel: PageModel[FullyExpanded]): List[FormComponent] =
+    pageModel match {
+      case Singleton(page, _) =>
+        val groupFields: List[List[FormComponent]] =
+          page.fields.collect {
+            case IsGroup(group) => group.fields
+          }
 
-    (section.fields ++ groupFields.flatten).filter {
-      case IsGroup(_)      => false
-      case IsMultiField(_) => false
-      case fc              => !data.data.contains(fc.id)
+        (page.fields ++ groupFields.flatten).filter {
+          case IsGroup(_)      => false
+          case IsMultiField(_) => false
+          case fc              => !data.data.contains(fc.id)
+        }
+      case Repeater(_, _, _, _, _) => Nil
     }
-  }
 
   def submittedFCs(data: FormDataRecalculated, formComponents: List[FormComponent]): List[FormComponent] = {
     val fcIds: Set[FormComponentId] = data.data.keySet
@@ -50,19 +53,19 @@ object ExpandUtils {
 
   def getAlwaysEmptyHiddenGroup(
     data: FormDataRecalculated,
-    section: Section,
+    singleton: Singleton[FullyExpanded],
     lookupExtractors: LookupExtractors): List[FormComponent] = {
-    val aeh = alwaysEmptyHidden(data, section) _
+    val aeh = alwaysEmptyHidden(data, singleton) _
     aeh({ case IsInformationMessage(info)               => info }) ++ // It is safe to include hidden fields for info messages, since they are not submissible
       aeh({ case IsChoice(choice)                       => choice }) ++
       aeh({ case lookupExtractors.IsRadioLookup(lookup) => lookup }) ++
       aeh({ case IsFileUpload()                         => () })
   }
 
-  private def alwaysEmptyHidden[A](data: FormDataRecalculated, section: Section)(
+  private def alwaysEmptyHidden[A](data: FormDataRecalculated, singleton: Singleton[FullyExpanded])(
     pf: PartialFunction[FormComponent, A]): List[FormComponent] = {
 
-    val (groupFcs, groups): (List[FormComponent], List[Group]) = section.fields.collect {
+    val (groupFcs, groups): (List[FormComponent], List[Group]) = singleton.page.fields.collect {
       case fc @ IsGroup(group) => (fc, group)
     } unzip
 
@@ -76,21 +79,26 @@ object ExpandUtils {
     filtered.take(Math.max(fieldsInGroups.size, present.size))
   }
 
-  def getAlwaysEmptyHidden(section: Section, lookupExtractors: LookupExtractors): List[FormComponent] =
-    section.fields.filter {
+  def getAlwaysEmptyHidden(
+    singleton: Singleton[FullyExpanded],
+    lookupExtractors: LookupExtractors): List[FormComponent] =
+    singleton.page.fields.filter {
       case IsChoice(_)                       => true
       case lookupExtractors.IsRadioLookup(_) => true
       case _                                 => false
     }
 
-  def hiddenFileUploads(section: Section): List[FormComponent] =
-    section.fields.filter {
+  def hiddenFileUploads(singleton: Singleton[FullyExpanded]): List[FormComponent] =
+    singleton.page.fields.filter {
       case IsFileUpload() => true
       case _              => false
     }
 
-  def findFormComponent(targetFcId: FormComponentId, sections: List[Section]): Option[FormComponent] =
-    sections.flatMap(_.fields).find(_.id == targetFcId)
+  def findFormComponent(
+    targetFcId: FormComponentId,
+    formModel: FormModel[FullyExpanded],
+    data: FormDataRecalculated): Option[FormComponent] =
+    formModel.expand(data).allFormComponents.find(_.id == targetFcId)
 
   private val NumericPrefix = "^(\\d+)_.*".r
 

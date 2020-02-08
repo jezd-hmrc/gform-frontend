@@ -20,22 +20,23 @@ import cats.Semigroup
 import cats.syntax.eq._
 import com.softwaremill.quicklens._
 import play.api.libs.json._
+import uk.gov.hmrc.gform.models.PageModel
 import uk.gov.hmrc.gform.graph.RecData
 import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponentId, Section }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponentId, FullyExpanded, PageMode, Section }
 import uk.gov.hmrc.gform.sharedmodel.graph.{ GraphNode, IncludeIfGN, SimpleGN }
 
 case class FormDataRecalculated(invisible: Set[GraphNode], recData: RecData) {
 
   val data: VariadicFormData = recData.data // ToDo JoVl Rename to recalculatedData
 
-  def isVisible(section: Section): Boolean =
+  def isVisible[A <: PageMode](pageModel: PageModel[A]): Boolean =
     !invisible.exists {
       case SimpleGN(_)               => false
-      case IncludeIfGN(_, includeIf) => section.includeIf.exists(_ === includeIf)
+      case IncludeIfGN(_, includeIf) => pageModel.fold(_.page.includeIf)(_.includeIf).exists(_ === includeIf)
     }
 
-  /* def isVisibleFormModel(section: FormModel[DataDriven]): Boolean =
+  /* def isVisibleFormModel(section: FormModel[FullyExpanded]): Boolean =
  *   !invisible.exists {
  *     case SimpleGN(_)               => false
  *     case IncludeIfGN(_, includeIf) => section.includeIf.exists(_ === includeIf)

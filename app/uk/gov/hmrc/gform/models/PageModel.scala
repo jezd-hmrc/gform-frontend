@@ -16,10 +16,48 @@
 
 package uk.gov.hmrc.gform.models
 
+import uk.gov.hmrc.gform.models.javascript.JsFormComponentModel
 import uk.gov.hmrc.gform.sharedmodel.SmartString
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.Page
+import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ ExpandedSection, FullyExpanded, IncludeIf, Page, PageMode, Section }
 
-sealed trait PageModel extends Product with Serializable
+sealed trait PageModel[A <: PageMode] extends Product with Serializable {
+  def title: SmartString = this match {
+    case Singleton(page, _)          => page.title
+    case Repeater(_, title, _, _, _) => title
+  }
+  def shortName: Option[SmartString] = this match {
+    case Singleton(page, _)              => page.shortName
+    case Repeater(_, _, shortName, _, _) => shortName
+  }
 
-case class Singleton(page: Page) extends PageModel
-case class Repeater(records: List[String], title: SmartString, shortName: Option[SmartString]) extends PageModel
+  def isTerminationPage = this match {
+    case Singleton(page, _)      => page.isTerminationPage
+    case Repeater(_, _, _, _, _) => false
+  }
+
+  def expand(formDataRecalculated: FormDataRecalculated): PageModel[FullyExpanded] = ???
+  def expandSectionRc(formDataRecalculated: FormDataRecalculated): ExpandedSection = ???
+
+  def jsFormComponentModels: List[JsFormComponentModel] = this match {
+    case Singleton(page, _)      => page.fields.flatMap(_.jsFormComponentModels)
+    case Repeater(_, _, _, _, _) => Nil
+  }
+
+  def fold[B](f: Singleton[A] => B)(g: Repeater[A] => B): B = this match {
+    case s: Singleton[A] => f(s)
+    case r: Repeater[A]  => g(r)
+  }
+
+}
+
+case class AddToListRecord(value: String) extends AnyVal
+
+case class Singleton[A <: PageMode](page: Page[A], source: Section) extends PageModel[A]
+case class Repeater[A <: PageMode](
+  records: List[AddToListRecord],
+  repTitle: SmartString,
+  repShortName: Option[SmartString],
+  includeIf: Option[IncludeIf],
+  source: Section.AddToList
+) extends PageModel[A]

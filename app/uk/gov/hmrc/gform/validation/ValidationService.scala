@@ -29,6 +29,7 @@ import uk.gov.hmrc.gform.graph.Recalculation
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.lookup.LookupRegistry
 import uk.gov.hmrc.gform.models.ExpandUtils.submittedFCs
+import uk.gov.hmrc.gform.models.{ FormModel, PageModel, Repeater, Singleton }
 import uk.gov.hmrc.gform.models.email.EmailFieldId
 import uk.gov.hmrc.gform.models.helpers.Fields
 import uk.gov.hmrc.gform.sharedmodel.EmailVerifierService
@@ -171,17 +172,21 @@ class ValidationService(
       .map(_.toMap.valid)
   }
 
-  private def validateUsingValidators(section: Section, data: FormDataRecalculated)(
+  private def validateUsingValidators(pageModel: PageModel[FullyExpanded], data: FormDataRecalculated)(
     implicit hc: HeaderCarrier,
     messages: Messages,
-    sse: SmartStringEvaluator): Future[ValidatedType[ValidationResult]] =
-    section.validators
-      .map(validateUsingSectionValidators(_, data))
-      .getOrElse(ValidationResult.empty.valid.pure[Future])
+    sse: SmartStringEvaluator
+  ): Future[ValidatedType[ValidationResult]] = {
+    val valid = ValidationResult.empty.valid.pure[Future]
+    pageModel match {
+      case Singleton(page, source) => page.validators.map(validateUsingSectionValidators(_, data)).getOrElse(valid)
+      case Repeater(_, _, _, _, _) => valid
+    }
+  }
 
   def validateFormComponents(
     sectionFields: List[FormComponent],
-    section: Section,
+    pageModel: PageModel[FullyExpanded],
     envelopeId: EnvelopeId,
     envelope: Envelope,
     retrievals: MaterialisedRetrievals,
@@ -207,7 +212,7 @@ class ValidationService(
               thirdPartyData,
               formTemplate,
               getEmailCodeFieldMatcher))
-      valRes                <- lift(validateUsingValidators(section, data))
+      valRes                <- lift(validateUsingValidators(pageModel, data))
       emailsForVerification <- lift(sendVerificationEmails(sectionFields, data, thirdPartyData))
     } yield {
       valRes.copy(emailVerification = emailsForVerification)
@@ -272,18 +277,22 @@ class ValidationService(
     }
   }
 
-  def validateForm(cache: AuthCacheWithForm, envelope: Envelope, retrievals: MaterialisedRetrievals)(
+  def validateForm(
+    cache: AuthCacheWithForm,
+    envelope: Envelope,
+    retrievals: MaterialisedRetrievals
+  )(
     implicit
     hc: HeaderCarrier,
     messages: Messages,
     l: LangADT,
-    sse: SmartStringEvaluator)
-    : Future[(ValidatedType[ValidationResult], Map[FormComponent, FormFieldValidationResult])] = {
+    sse: SmartStringEvaluator
+  ): Future[(ValidatedType[ValidationResult], Map[FormComponent, FormFieldValidationResult])] = {
 
     val dataRaw = cache.variadicFormData
 
-    def filterSection(sections: List[Section], data: FormDataRecalculated): List[Section] =
-      sections.filter(data.isVisible)
+    def filterPages(formModel: FormModel[FullyExpanded], data: FormDataRecalculated): FormModel[FullyExpanded] =
+      FormModel(formModel.pages.filter(data.isVisible))
 
     for {
       data <- recalculation.recalculateFormData(
@@ -293,25 +302,26 @@ class ValidationService(
                cache.form.thirdPartyData,
                cache.form.envelopeId
              )
-      allSections = RepeatingComponentService.getAllSections(cache.formTemplate, data)
-      sections = filterSection(allSections, data)
-      allFields = sections.flatMap(_.expandSectionRc(data.data).allFCs)
+      //allSections = RepeatingComponentService.getAllSections(cache.formTemplate, data)
+      formModel = FormModel.expand(cache.formTemplate, data)
+      visibleFormModel = filterPages(formModel, data)
+      allFields = visibleFormModel.allFormComponents
       allRequiredFields = allFields.filter(_.mandatory)
       allSubmittedFields = submittedFCs(data, allFields)
       allFieldsToValidate = (allRequiredFields.toSet ++ allSubmittedFields.toSet).toList
-      v1 <- sections
+      v1 <- visibleFormModel.pages
              .traverse(
-               section =>
+               pageModel =>
                  validateFormComponents(
                    allFieldsToValidate,
-                   section,
+                   pageModel,
                    cache.form.envelopeId,
                    envelope,
                    retrievals,
                    cache.form.thirdPartyData,
                    cache.formTemplate,
                    data,
-                   GetEmailCodeFieldMatcher(allSections)
+                   GetEmailCodeFieldMatcher(formModel)
                ))
              .map(Monoid[ValidatedType[ValidationResult]].combineAll)
       v = Monoid.combine(v1, ValidationUtil.validateFileUploadHasScannedFiles(allFieldsToValidate, envelope))

@@ -29,9 +29,10 @@ import uk.gov.hmrc.gform.controllers.helpers.FormDataHelpers.processResponseData
 import uk.gov.hmrc.gform.controllers.{ AuthCacheWithForm, AuthenticatedRequestActionsAlgebra }
 import uk.gov.hmrc.gform.fileupload.{ Attachments, Envelope, FileUploadService }
 import uk.gov.hmrc.gform.graph.{ RecData, Recalculation }
+import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.models.helpers.Fields
 import uk.gov.hmrc.gform.sharedmodel.form._
-import uk.gov.hmrc.gform.sharedmodel.formtemplate._
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FullyExpanded, _ }
 import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, LangADT, VariadicFormData }
 import uk.gov.hmrc.gform.summarypdf.PdfGeneratorService
 import uk.gov.hmrc.gform.validation.ValidationUtil.{ GformError, ValidatedType }
@@ -221,12 +222,15 @@ class DeclarationController(
         .showAcknowledgement(maybeAccessCode, cache.form.formTemplateId))
   }
 
-  private def auditSubmissionEvent(cache: AuthCacheWithForm, customerId: CustomerId)(implicit request: Request[_]) =
+  private def auditSubmissionEvent(cache: AuthCacheWithForm, customerId: CustomerId)(implicit request: Request[_]) = {
+    val formModel: FormModel[FullyExpanded] = ???
     auditService.sendSubmissionEvent(
       cache.form,
-      cache.formTemplate.sections :+ cache.formTemplate.declarationSection,
+      //cache.formTemplate.sections :+ cache.formTemplate.declarationSection,
+      formModel,
       cache.retrievals,
       customerId)
+  }
 
   private def createHtmlForInvalidSubmission(
     maybeAccessCode: Option[AccessCode],

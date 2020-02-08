@@ -21,6 +21,7 @@ import cats.syntax.functor._
 import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 import scalax.collection.GraphEdge._
+import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 
@@ -28,15 +29,15 @@ object DependencyGraph {
 
   val emptyGraph: Graph[GraphNode, DiEdge] = Graph.empty
 
-  def toGraph(formTemplate: FormTemplate, data: VariadicFormData): Graph[GraphNode, DiEdge] =
-    graphFrom(formTemplate.expandFormTemplate(data))
+  def toGraph(formModel: FormModel[FullyExpanded]): Graph[GraphNode, DiEdge] =
+    graphFrom(formModel)
 
-  def toGraphFull(formTemplate: FormTemplate): Graph[GraphNode, DiEdge] =
-    graphFrom(formTemplate.expandFormTemplateFull)
+  def toGraphFull(formTemplate: FormTemplate): Graph[GraphNode, DiEdge] = ??? // TODO JoVl
+  // graphFrom(formTemplate.expandFormTemplateFull)
 
-  private def graphFrom(expandedFT: ExpandedFormTemplate): Graph[GraphNode, DiEdge] = {
+  private def graphFrom(formModel: FormModel[FullyExpanded]): Graph[GraphNode, DiEdge] = {
 
-    val allFcIds = expandedFT.allFormComponentIds
+    val allFcIds = formModel.allFormComponentIds
 
     def edges(fc: FormComponent): List[DiEdge[GraphNode]] = {
       def fcIds(fc: FormComponent): List[FormComponentId] = fc match {
@@ -74,19 +75,20 @@ object DependencyGraph {
         case otherwise                        => List.empty
       }
 
-    val includeIfs: List[DiEdge[GraphNode]] = expandedFT.allIncludeIfs.flatMap {
+    val includeIfs: List[DiEdge[GraphNode]] = formModel.allIncludeIfs.flatMap {
       case (expandedFCs, includeIf, index) =>
         val includeIfFcId = FormComponentId("includeIf_" + index)
 
         val iign = IncludeIfGN(includeIfFcId, includeIf)
         val deps = evalBooleanExpr(includeIf.expr)
 
-        expandedFCs.flatMap(_.allIds).map(a => SimpleGN(a) ~> iign) ++
+        //expandedFCs.flatMap(_.allIds).map(a => SimpleGN(a) ~> iign) ++
+        expandedFCs.map(_.id).map(a => SimpleGN(a) ~> iign) ++ // TODO JoVl
           deps.map(a => iign ~> SimpleGN(a))
 
     }
 
-    expandedFT.allFormComponents.flatMap(edges).foldLeft(emptyGraph)(_ + _) ++ includeIfs
+    formModel.allFormComponents.flatMap(edges).foldLeft(emptyGraph)(_ + _) ++ includeIfs
   }
 
   def constructDependencyGraph(

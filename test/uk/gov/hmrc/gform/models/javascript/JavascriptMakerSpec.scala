@@ -44,10 +44,8 @@ class JavascriptMakerSpec extends Spec with GraphSpec {
   private def javascript(formTemplate: FormTemplate, sectionNumber: SectionNumber): String = {
     implicit val hc: HeaderCarrier = HeaderCarrier()
     val data: VariadicFormData = VariadicFormData.empty
-    val cache: AuthCacheWithForm =
-      AuthCacheWithForm(ExampleData.materialisedRetrievals, ExampleData.form, formTemplate, Role.Customer)
-    val result: EitherEffect[(FormDataRecalculated, List[Section])] =
-      processDataService.recalculateDataAndSections(data, cache)
+    val cache: AuthCacheWithForm = AuthCacheWithForm(ExampleData.materialisedRetrievals, ExampleData.form, formTemplate, Role.Customer)
+    val result: EitherEffect[(FormDataRecalculated, List[Section])] = processDataService.recalculateDataAndSections(data, cache)
 
     val dynamicSections
       : List[Section] = result.right.get._2 // What a shame to do this unsafe '.get', but it is ok, since this code is not under the test.

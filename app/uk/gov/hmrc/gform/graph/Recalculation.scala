@@ -34,6 +34,7 @@ import uk.gov.hmrc.gform.commons.{ BigDecimalUtil, NumberFormatUtil }
 import uk.gov.hmrc.gform.eval.BooleanExprEval
 import uk.gov.hmrc.gform.gform.AuthContextPrepop
 import uk.gov.hmrc.gform.graph.processor.UserCtxEvaluatorProcessor
+import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.sharedmodel.{ IdNumberValue, RecalculatedTaxPeriodKey, SubmissionRef, VariadicFormData, VariadicValue }
 import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, FormDataRecalculated, ThirdPartyData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
@@ -111,9 +112,13 @@ class Recalculation[F[_]: Monad, E](
     additionalFcLookup: Map[FormComponentId, FormComponent])(
     implicit hc: HeaderCarrier): EitherT[F, GraphException, FormDataRecalculated] = {
 
-    val graph: Graph[GraphNode, DiEdge] = DependencyGraph.toGraph(formTemplate, data)
+    val formModel = FormModel.fromRawData(data, formTemplate)
 
-    val fcLookup = formTemplate.expandFormTemplate(data).formComponentsLookup(data) ++ additionalFcLookup
+    val graph: Graph[GraphNode, DiEdge] = DependencyGraph.toGraph(formModel)
+
+    val fcLookup_ = formModel.allFormComponents.flatMap(fc => fc.expandFormComponent(data).allIds.map(_ -> fc)).toMap
+
+    val fcLookup = fcLookup_ ++ additionalFcLookup
 
     val revealingChoices: List[(FormComponent, RevealingChoice)] = fcLookup.values.toList.collect {
       case fc @ IsRevealingChoice(rc) => (fc, rc)

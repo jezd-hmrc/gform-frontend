@@ -19,7 +19,12 @@ package uk.gov.hmrc.gform.sharedmodel.formtemplate
 import play.api.libs.json.{ Json, OFormat }
 import uk.gov.hmrc.gform.sharedmodel.SmartString
 
-case class Page(
+sealed trait PageMode extends Product with Serializable
+trait Basic extends PageMode
+trait GroupExpanded extends PageMode
+trait FullyExpanded extends PageMode
+
+case class Page[A <: PageMode](
   title: SmartString,
   description: Option[SmartString],
   shortName: Option[SmartString],
@@ -33,8 +38,11 @@ case class Page(
   lazy val expandedFormComponents: List[FormComponent] = fields.flatMap(_.expandedFormComponents)
 
   val expandFieldsFull: List[ExpandedFormComponent] = fields.map(_.expandFormComponentFull)
+
+  val isTerminationPage: Boolean = continueIf.contains(Stop)
+
 }
 
 object Page {
-  implicit val pageFormat: OFormat[Page] = Json.format[Page]
+  implicit val pageFormat: OFormat[Page[Basic]] = Json.format[Page[Basic]]
 }

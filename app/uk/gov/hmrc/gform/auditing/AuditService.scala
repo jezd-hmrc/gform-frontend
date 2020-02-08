@@ -20,9 +20,10 @@ import play.api.libs.json.Json
 import play.api.mvc.Request
 import uk.gov.hmrc.gform.auth.models.{ AnonymousRetrievals, AuthenticatedRetrievals, MaterialisedRetrievals }
 import uk.gov.hmrc.gform.gform.CustomerId
+import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.models.mappings.{ IRCT, IRSA, NINO, VATReg }
 import uk.gov.hmrc.gform.sharedmodel.form.{ Form, FormField }
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ BaseSection, FormComponent, FormTemplate, Group, UkSortCode }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponent, FormTemplate, FullyExpanded, Group, UkSortCode }
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.{ DataEvent, ExtendedDataEvent }
 import uk.gov.hmrc.http.HeaderCarrier
@@ -33,49 +34,48 @@ trait AuditService {
 
   def auditConnector: AuditConnector
 
-  def formToMap(form: Form, sections: List[BaseSection]): Map[String, String] = {
-
-    val optSortCode: List[FormComponent] = sections.flatMap { section =>
-      val groupFields = section.fields.collect {
-        case FormComponent(_, Group(fields, _, _, _, _, _), _, _, _, _, _, _, _, _, _, _, _, _) => fields
-      }.flatten
-      (groupFields ++ section.fields.filter(_.`type` match {
-        case x: Group => false
-        case _        => true
-      })).filter(_.`type` match {
-        case x: UkSortCode => true
-        case _             => false
-      })
-    }
-
-    val processedData: Seq[FormField] = if (optSortCode.nonEmpty) {
-      optSortCode.flatMap { fieldValue =>
-        val xc = UkSortCode.fields(fieldValue.id).toList.flatMap { fieldId =>
-          form.formData.fields.filterNot(_.id == fieldId)
-        }
-        val sortCode = UkSortCode
-          .fields(fieldValue.id)
-          .toList
-          .flatMap { fieldId =>
-            form.formData.fields.toList.filter(_.id == fieldId)
-          }
-          .map(_.value)
-          .mkString("-")
-        xc ++ Seq(FormField(fieldValue.id, sortCode))
-      }
-    } else {
-      form.formData.fields
-    }
-
-    processedData.map(x => x.id.value -> x.value).toMap
-  }
+  def formToMap(form: Form, formModel: FormModel[FullyExpanded]): Map[String, String] =
+    /* val optSortCode: List[FormComponent] = sections.flatMap { section =>
+     *   val groupFields = section.fields.collect {
+     *     case FormComponent(_, Group(fields, _, _, _, _, _), _, _, _, _, _, _, _, _, _, _, _, _) => fields
+     *   }.flatten
+     *   (groupFields ++ section.fields.filter(_.`type` match {
+     *     case x: Group => false
+     *     case _        => true
+     *   })).filter(_.`type` match {
+     *     case x: UkSortCode => true
+     *     case _             => false
+     *   })
+     * }
+     *
+     * val processedData: Seq[FormField] = if (optSortCode.nonEmpty) {
+     *   optSortCode.flatMap { fieldValue =>
+     *     val xc = UkSortCode.fields(fieldValue.id).toList.flatMap { fieldId =>
+     *       form.formData.fields.filterNot(_.id == fieldId)
+     *     }
+     *     val sortCode = UkSortCode
+     *       .fields(fieldValue.id)
+     *       .toList
+     *       .flatMap { fieldId =>
+     *         form.formData.fields.toList.filter(_.id == fieldId)
+     *       }
+     *       .map(_.value)
+     *       .mkString("-")
+     *     xc ++ Seq(FormField(fieldValue.id, sortCode))
+     *   }
+     * } else {
+     *   form.formData.fields
+     * }
+     *
+     * processedData.map(x => x.id.value -> x.value).toMap */
+    ??? // TODO JoVl
 
   def sendSubmissionEvent(
     form: Form,
-    sections: List[BaseSection],
+    formModel: FormModel[FullyExpanded],
     retrievals: MaterialisedRetrievals,
     customerId: CustomerId)(implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[_]) =
-    sendEvent(form, formToMap(form, sections), retrievals, customerId)
+    sendEvent(form, formToMap(form, formModel), retrievals, customerId)
 
   private def sendEvent(
     form: Form,
@@ -89,10 +89,11 @@ trait AuditService {
 
   def calculateSubmissionEvent(
     form: Form,
-    formTemplate: FormTemplate,
+    formModel: FormModel[FullyExpanded],
     retrievals: MaterialisedRetrievals,
     customerId: CustomerId)(implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[_]): ExtendedDataEvent =
-    eventFor(form, formToMap(form, formTemplate.sections :+ formTemplate.declarationSection), retrievals, customerId)
+    //eventFor(form, formToMap(form, formTemplate.sections :+ formTemplate.declarationSection), retrievals, customerId)
+    eventFor(form, formToMap(form, formModel), retrievals, customerId)
 
   private def eventFor(
     form: Form,

@@ -31,6 +31,7 @@ import uk.gov.hmrc.gform.gform.handlers.FormControllerRequestHandler
 import uk.gov.hmrc.gform.gformbackend.GformConnector
 import uk.gov.hmrc.gform.lookup.LookupExtractors
 import uk.gov.hmrc.gform.models.ExpandUtils._
+import uk.gov.hmrc.gform.models.{ Repeater, Singleton }
 import uk.gov.hmrc.gform.models.gform.{ FormValidationOutcome, NoSpecificAction }
 import uk.gov.hmrc.gform.models.{ ProcessData, ProcessDataService }
 import uk.gov.hmrc.gform.sharedmodel._
@@ -93,23 +94,30 @@ class FormController(
                 validationService.evaluateValidation
               )
           }
-          .map(handlerResult =>
-            Ok(renderer.renderSection(
-              maybeAccessCode,
-              cache.form,
-              sectionNumber,
-              handlerResult.data,
-              cache.formTemplate,
-              handlerResult.result,
-              handlerResult.envelope,
-              cache.form.envelopeId,
-              handlerResult.validatedType,
-              handlerResult.sections,
-              formMaxAttachmentSizeMB,
-              contentTypes,
-              cache.retrievals,
-              cache.form.thirdPartyData.obligations
-            )))
+          .map { handlerResult =>
+            val result = handlerResult.formModel(sectionNumber) match {
+              case singleton @ Singleton(_, _) =>
+                renderer.renderSection(
+                  maybeAccessCode,
+                  cache.form,
+                  sectionNumber,
+                  handlerResult.data,
+                  cache.formTemplate,
+                  handlerResult.result,
+                  handlerResult.envelope,
+                  cache.form.envelopeId,
+                  handlerResult.validatedType,
+                  handlerResult.formModel,
+                  singleton,
+                  formMaxAttachmentSizeMB,
+                  contentTypes,
+                  cache.retrievals,
+                  cache.form.thirdPartyData.obligations
+                )
+              case Repeater(_, _, _, _, _) => ???
+            }
+            Ok(result)
+          }
     }
 
   def deleteOnExit(formTemplateId: FormTemplateId): Action[AnyContent] =
@@ -125,13 +133,16 @@ class FormController(
   ) = auth.authAndRetrieveForm(formTemplateId, maybeAccessCode, OperationWithForm.EditForm) {
     implicit request => implicit l => cache => implicit sse =>
       processResponseDataFromBody(request, cache.formTemplate) { dataRaw =>
+        def getSectionTitle4Ga(processData: ProcessData, sectionNumber: SectionNumber): SectionTitle4Ga =
+          sectionTitle4GaFactory(processData.formModel(sectionNumber).title.value)
+
         def validateAndUpdateData(cache: AuthCacheWithForm, processData: ProcessData)(
           toResult: Option[SectionNumber] => Result): Future[Result] =
           for {
             envelope <- fileUploadService.getEnvelope(cache.form.envelopeId)
             FormValidationOutcome(_, formData, v) <- handler.handleFormValidation(
                                                       processData.data,
-                                                      processData.sections,
+                                                      processData.formModel,
                                                       sectionNumber,
                                                       cache,
                                                       envelope,
@@ -179,7 +190,7 @@ class FormController(
         ): Future[Result] =
           validateAndUpdateData(cache, processData) {
             case Some(sn) =>
-              val sectionTitle4Ga = sectionTitle4GaFactory(processData.sections(sn.value).title.value)
+              val sectionTitle4Ga = getSectionTitle4Ga(processData, sn)
               Redirect(
                 routes.FormController
                   .form(formTemplateId, maybeAccessCode, sn, sectionTitle4Ga, SuppressErrors(sectionNumber < sn)))
@@ -197,7 +208,7 @@ class FormController(
               case None =>
                 val call = maybeSn match {
                   case Some(sn) =>
-                    val sectionTitle4Ga = sectionTitle4GaFactory(processData.sections(sn.value).title.value)
+                    val sectionTitle4Ga = getSectionTitle4Ga(processData, sn)
                     routes.FormController.form(formTemplateId, None, sn, sectionTitle4Ga, SeYes)
                   case None => routes.SummaryController.summaryById(formTemplateId, maybeAccessCode)
                 }
@@ -207,13 +218,13 @@ class FormController(
 
         def processBack(processData: ProcessData, sn: SectionNumber): Future[Result] =
           validateAndUpdateData(cache, processData) { _ =>
-            val sectionTitle4Ga = sectionTitle4GaFactory(processData.sections(sn.value).title.value)
+            val sectionTitle4Ga = getSectionTitle4Ga(processData, sn)
             Redirect(routes.FormController.form(formTemplateId, maybeAccessCode, sn, sectionTitle4Ga, SeYes))
           }
 
         def handleGroup(processData: ProcessData, anchor: String): Future[Result] =
           validateAndUpdateData(cache, processData) { _ =>
-            val sectionTitle4Ga = sectionTitle4GaFactory(processData.sections(sectionNumber.value).title.value)
+            val sectionTitle4Ga = getSectionTitle4Ga(processData, sectionNumber)
             Redirect(
               routes.FormController
                 .form(formTemplateId, maybeAccessCode, sectionNumber, sectionTitle4Ga, SeYes)
@@ -224,14 +235,14 @@ class FormController(
         def processAddGroup(processData: ProcessData, groupId: String): Future[Result] = {
           val startPos = groupId.indexOf('-') + 1
           val groupComponentId = FormComponentId(groupId.substring(startPos))
-          val maybeGroupFc = findFormComponent(groupComponentId, processData.sections)
+          val maybeGroupFc = findFormComponent(groupComponentId, processData.formModel, processData.data)
           val (updatedData, anchor) = addNextGroup(maybeGroupFc, processData.data, lookupExtractors)
 
           handleGroup(processData.copy(data = updatedData), anchor.map("#" + _).getOrElse(""))
         }
 
         def processRemoveGroup(processData: ProcessData, idx: Int, groupId: String): Future[Result] = {
-          val maybeGroupFc = findFormComponent(FormComponentId(groupId), processData.sections)
+          val maybeGroupFc = findFormComponent(FormComponentId(groupId), processData.formModel, processData.data)
           val updatedData = removeGroupFromData(idx, maybeGroupFc, processData.data)
 
           handleGroup(processData.copy(data = updatedData), "")
@@ -240,7 +251,7 @@ class FormController(
         for {
           processData <- processDataService
                           .getProcessData(dataRaw, cache, gformConnector.getAllTaxPeriods, NoSpecificAction)
-          nav = Navigator(sectionNumber, processData.sections, processData.data).navigate
+          nav = Navigator(sectionNumber, processData.formModel, processData.data).navigate
           res <- nav match {
                   case SaveAndContinue           => processSaveAndContinue(processData)
                   case SaveAndExit               => processSaveAndExit(processData)

@@ -23,6 +23,8 @@ import uk.gov.hmrc.gform.auditing.AuditService
 import uk.gov.hmrc.gform.auth.models.OperationWithForm
 import uk.gov.hmrc.gform.controllers.AuthenticatedRequestActionsAlgebra
 import uk.gov.hmrc.gform.gformbackend.GformConnector
+import uk.gov.hmrc.gform.graph.RecData
+import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.nonRepudiation.NonRepudiationHelpers
 import uk.gov.hmrc.gform.sharedmodel.AccessCode
 import uk.gov.hmrc.gform.sharedmodel.form._
@@ -80,10 +82,12 @@ class AcknowledgementController(
         val formString = nonRepudiationHelpers.formDataToJson(cache.form)
         val hashedValue = nonRepudiationHelpers.computeHash(formString)
 
+        val formModel: FormModel[FullyExpanded] = FormModel.fromCache(cache)
+
         for {
           customerId <- customerIdRecalulation.evaluateCustomerId(cache)
           eventId = auditService
-            .calculateSubmissionEvent(cache.form, cache.formTemplate, cache.retrievals, customerId)
+            .calculateSubmissionEvent(cache.form, formModel, cache.retrievals, customerId)
             .eventId
           _          <- nonRepudiationHelpers.sendAuditEvent(hashedValue, formString, eventId)
           submission <- gformConnector.submissionDetails(FormIdData(cache.retrievals, formTemplateId, maybeAccessCode))

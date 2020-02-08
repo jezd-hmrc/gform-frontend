@@ -75,7 +75,7 @@ class SectionSpec extends Spec with GeneratorDrivenPropertyChecks {
       (VariadicFormData.manys(aId -> Seq("not_a_number")),  all, all, List("a", "f")),
       (VariadicFormData.manys(aId -> Seq("0")),             all, all, List("a", "b", "c", "f")),
       (VariadicFormData.manys(aId -> Seq("1")),             all, all, List("a", "d", "e", "f")),
-      (VariadicFormData.manys(aId -> Seq("0", "1")),           all, all, all)
+      (VariadicFormData.manys(aId -> Seq("0", "1")),        all, all, all)
       // format: on
     )
 
@@ -116,9 +116,9 @@ class SectionSpec extends Spec with GeneratorDrivenPropertyChecks {
     def allIds(es: ExpandedSection): List[String] = es.allFCs.map(_.id.value)
 
     forAll(dataAndExpectations) { (data, expectedFull, expected, expectedRc) =>
-      val expandedSectionRc: ExpandedSection = section.expandSectionRc(data)
-      val expandedSection: ExpandedSection = section.expandSection(data)
       val expandedSectionFull: ExpandedSection = section.expandSectionFull
+      val expandedSection: ExpandedSection = section.expandSection(data)
+      val expandedSectionRc: ExpandedSection = section.expandSectionRc(data)
 
       allIds(expandedSectionFull) shouldBe expectedFull
       allIds(expandedSection) shouldBe expected
