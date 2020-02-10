@@ -43,7 +43,7 @@ object FormDataHelpers {
       .map(_.map { case (a, b) => (FormComponentId(a), b.map(_.trim)) }) match {
       case Some(data) => continuation(buildVariadicFormDataFromBrowserPostData(template, data))
       case None =>
-        Future.successful(BadRequest("Cannot parse body as FormUrlEncoded")) // Thank you play-authorised-frontend for forcing me to do this check
+        Future.successful(BadRequest("Cannot parse body as FormUrlEncoded"))
     }
 
   def get(data: Map[FormComponentId, Seq[String]], id: FormComponentId): List[String] =

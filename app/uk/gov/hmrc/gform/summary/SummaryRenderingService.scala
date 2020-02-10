@@ -32,7 +32,7 @@ import uk.gov.hmrc.gform.gform.{ HtmlSanitiser, SummaryPagePurpose }
 import uk.gov.hmrc.gform.graph.Recalculation
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.models.ExpandUtils._
-import uk.gov.hmrc.gform.models.{ FormModel, Singleton }
+import uk.gov.hmrc.gform.models.{ FormModel, FormModelBuilder, Singleton }
 import uk.gov.hmrc.gform.models.helpers.Fields.flattenGroups
 import uk.gov.hmrc.gform.models.helpers.{ Fields, TaxPeriodHelper }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.FullyExpanded
@@ -151,10 +151,12 @@ class SummaryRenderingService(
                  cache.form.thirdPartyData,
                  cache.form.envelopeId)
       envelope <- envelopeF
-      (v, _)   <- validationService.validateForm(cache, envelope, cache.retrievals)
+      formModel = FormModelBuilder.fromCache(cache).expand(data)
+      (v, _) <- validationService.validateForm(formModel, cache, envelope, cache.retrievals)
     } yield
       SummaryRenderingService.renderSummary(
         cache.formTemplate,
+        formModel,
         v,
         data,
         maybeAccessCode,
@@ -172,6 +174,7 @@ class SummaryRenderingService(
 object SummaryRenderingService {
   def renderSummary(
     formTemplate: FormTemplate,
+    formModel: FormModel[FullyExpanded],
     validatedType: ValidatedType[ValidationResult],
     formFields: FormDataRecalculated,
     maybeAccessCode: Option[AccessCode],
@@ -194,6 +197,7 @@ object SummaryRenderingService {
         formFields,
         maybeAccessCode,
         formTemplate,
+        formModel,
         envelope,
         obligations,
         summaryPagePurpose,
@@ -217,6 +221,7 @@ object SummaryRenderingService {
     data: FormDataRecalculated,
     maybeAccessCode: Option[AccessCode],
     formTemplate: FormTemplate,
+    formModel: FormModel[FullyExpanded],
     envelope: Envelope,
     obligations: Obligations,
     summaryPagePurpose: SummaryPagePurpose,
@@ -228,7 +233,7 @@ object SummaryRenderingService {
     viewHelpers: ViewHelpersAlgebra,
     lise: SmartStringEvaluator): List[Html] = {
 
-    def renderHtmls(formModel: FormModel[FullyExpanded])(implicit l: LangADT): List[Html] = {
+    def renderHtmls()(implicit l: LangADT): List[Html] = {
       val fields: List[FormComponent] = formModel.allFormComponents
       def validate(formComponent: FormComponent): Option[FormFieldValidationResult] = {
         val gformErrors = validatedType match {
@@ -396,10 +401,8 @@ object SummaryRenderingService {
 
     }
 
-    val formModel = FormModel.expand(formTemplate, data)
-
     //val fields = sections.flatMap(RepeatingComponentService.atomicFields(_, data.data))
 
-    renderHtmls(formModel)
+    renderHtmls()
   }
 }

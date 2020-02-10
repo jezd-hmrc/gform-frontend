@@ -65,8 +65,8 @@ class ProcessDataSpec
       // format: on
     )
 
-    val formModel = getFormModel(sections)
-    val mongoFormModel = getFormModel(mongoSections)
+    val formModel = mkFormModel(sections)
+    val mongoFormModel = mkFormModel(mongoSections)
 
     forAll(visibilityIndices) { (input, expectedOuput) ⇒
       val res = processDataService
@@ -105,8 +105,8 @@ class ProcessDataSpec
       // format: on
     )
 
-    val formModel = getFormModel(sections)
-    val mongoFormModel = getFormModel(mongoSections)
+    val formModel = mkFormModel(sections)
+    val mongoFormModel = mkFormModel(mongoSections)
 
     forAll(visibilityIndices) { (input, expectedOuput) ⇒
       val res = processDataService

@@ -25,16 +25,16 @@ import uk.gov.hmrc.gform.sharedmodel.VariadicValue.One
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, FormComponent, FormComponentId, GroupExpanded, Page, Section, Value }
 
-class FormModelFullyExpandedSpec extends FlatSpec with Matchers {
+class FormModelFullyExpandedSpec extends FlatSpec with Matchers with FormModelSupport {
   "FormModel.expand" should "expand groups and repeatedSections in Section.NonRepeatingPage" in {
     val fcA = mkFormComponent("a", Value)
     val fcB = mkFormComponent("b", Value)
     val group: FormComponent = mkFormComponent("group", mkGroup(5, List(fcA, fcB)))
     val nonRepeatingPage: Section.NonRepeatingPage = mkSection(group)
-    val formTemplate = mkFormTemplate(List(nonRepeatingPage))
-    val basicFormModel = FormModel.basic(formTemplate)
+    //val formTemplate = mkFormTemplate(List(nonRepeatingPage))
+    //val basicFormModel = FormModel.basic(formTemplate)
     val data = FormDataRecalculated.empty
-    val formModel = FormModel.expand(formTemplate, data)
+    val formModel = mkFormModel(List(nonRepeatingPage), data)
 
     val expectedPage = Page[GroupExpanded](
       toSmartString("Section Name"),
@@ -95,11 +95,11 @@ class FormModelFullyExpandedSpec extends FlatSpec with Matchers {
   it should "expand repeatedSections" in {
     val fcA = mkFormComponent("a", Value)
     val repeatingPage: Section.RepeatingPage = mkRepeatingPageSection(fcA :: Nil)
-    val formTemplate = mkFormTemplate(List(repeatingPage))
+    //val formTemplate = mkFormTemplate(List(repeatingPage))
     //val formModel = FormModel.basic(formTemplate)
 
-    val data = FormDataRecalculated.empty
-    val formModel = FormModel.expand(formTemplate, data)
+    //val data = FormDataRecalculated.empty
+    val formModel = mkFormModel(List(repeatingPage))
 
     println("formModel: " + (formModel))
 

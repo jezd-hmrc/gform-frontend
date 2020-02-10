@@ -32,9 +32,9 @@ import shapeless.syntax.typeable._
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.commons.{ BigDecimalUtil, NumberFormatUtil }
 import uk.gov.hmrc.gform.eval.BooleanExprEval
-import uk.gov.hmrc.gform.gform.AuthContextPrepop
+import uk.gov.hmrc.gform.gform.{ AuthContextPrepop, StructuredFormDataBuilder }
 import uk.gov.hmrc.gform.graph.processor.UserCtxEvaluatorProcessor
-import uk.gov.hmrc.gform.models.FormModel
+import uk.gov.hmrc.gform.models.{ FormModel, FormModelBuilder }
 import uk.gov.hmrc.gform.sharedmodel.{ IdNumberValue, RecalculatedTaxPeriodKey, SubmissionRef, VariadicFormData, VariadicValue }
 import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, FormDataRecalculated, ThirdPartyData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
@@ -112,7 +112,9 @@ class Recalculation[F[_]: Monad, E](
     additionalFcLookup: Map[FormComponentId, FormComponent])(
     implicit hc: HeaderCarrier): EitherT[F, GraphException, FormDataRecalculated] = {
 
-    val formModel = FormModel.fromRawData(data, formTemplate)
+    val formModelBuilder = new FormModelBuilder(retrievals, formTemplate, thirdPartyData, envelopeId)
+
+    val formModel = formModelBuilder.fromRawData(data)
 
     val graph: Graph[GraphNode, DiEdge] = DependencyGraph.toGraph(formModel)
 
@@ -345,7 +347,7 @@ class Evaluator[F[_]: Monad](
     }
   }
 
-  def evalFormCtx(visSet: Set[GraphNode], fc: FormCtx, dataLookup: VariadicFormData): Convertible[F] =
+  private def evalFormCtx(visSet: Set[GraphNode], fc: FormCtx, dataLookup: VariadicFormData): Convertible[F] =
     if (isHidden(fc.toFieldId, visSet)) MaybeConvertibleHidden(defaultF, fc.toFieldId)
     else getSubmissionData(dataLookup, fc.toFieldId)
 
@@ -431,7 +433,10 @@ class Evaluator[F[_]: Monad](
     retrievals: MaterialisedRetrievals,
     formTemplate: FormTemplate,
     thirdPartyData: ThirdPartyData,
-    envelopeId: EnvelopeId)(implicit hc: HeaderCarrier): F[Option[String]] =
+    envelopeId: EnvelopeId
+  )(
+    implicit hc: HeaderCarrier
+  ): F[Option[String]] =
     Convertible
       .asString(
         eval(
@@ -523,7 +528,7 @@ case class NonConvertible[F[_]](str: F[RecalculationOp]) extends Convertible[F]
 case class MaybeConvertible[F[_]](str: F[String]) extends Convertible[F]
 case class MaybeConvertibleHidden[F[_]: Applicative](str: F[String], fcId: FormComponentId) extends Convertible[F] {
   def visible[A](formTemplate: FormTemplate, f: String => Option[A]): F[Option[A]] = {
-    val lookup = formTemplate.expandFormTemplateFull.formComponentsLookupFull
+    val lookup: Map[FormComponentId, FormComponent] = FormModel.expandFull(formTemplate).toLookup
     val maybeFc: Option[FormComponent] = lookup.get(fcId).filter {
       case IsChoice(_) => false
       case _           => true

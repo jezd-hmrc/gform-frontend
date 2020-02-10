@@ -94,11 +94,8 @@ object ExpandUtils {
       case _              => false
     }
 
-  def findFormComponent(
-    targetFcId: FormComponentId,
-    formModel: FormModel[FullyExpanded],
-    data: FormDataRecalculated): Option[FormComponent] =
-    formModel.expand(data).allFormComponents.find(_.id == targetFcId)
+  def findFormComponent(targetFcId: FormComponentId, formModel: FormModel[FullyExpanded]): Option[FormComponent] =
+    formModel.allFormComponents.find(_.id == targetFcId)
 
   private val NumericPrefix = "^(\\d+)_.*".r
 

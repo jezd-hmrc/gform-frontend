@@ -83,13 +83,10 @@ class FormValidator(implicit ec: ExecutionContext) {
     val pageModel = formModel(sectionNumber)
     val nonSubmittedYet = nonSubmittedFCsOfNonGroup(formDataRecalculated, pageModel)
     //val allFC = submittedFCs(formDataRecalculated, formModel.flatMap(_.expandSection(formDataRecalculated.data).allFCs)) ++ nonSubmittedYet
-    val allFC: List[FormComponent] = submittedFCs(
-      formDataRecalculated,
-      formModel.expand(formDataRecalculated).allFormComponents) ++ nonSubmittedYet
+    val allFC: List[FormComponent] = submittedFCs(formDataRecalculated, formModel.allFormComponents) ++ nonSubmittedYet
     //val sectionFields = submittedFCs(formDataRecalculated, section.expandSectionRc(formDataRecalculated.data).allFCs) ++ nonSubmittedYet
-    val sectionFields: List[FormComponent] = submittedFCs(
-      formDataRecalculated,
-      pageModel.expandSectionRc(formDataRecalculated).allFCs) ++ nonSubmittedYet
+    val sectionFields
+      : List[FormComponent] = submittedFCs(formDataRecalculated, pageModel.allFormComponents) ++ nonSubmittedYet
 
     for {
       v <- validateFormComponents(

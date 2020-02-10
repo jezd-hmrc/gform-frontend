@@ -16,25 +16,92 @@
 
 package uk.gov.hmrc.gform.models
 
+import cats.Id
+import cats.syntax.show._
 import scala.util.Try
+import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.commons.BigDecimalUtil.toBigDecimalDefault
 import uk.gov.hmrc.gform.gform.FormComponentUpdater
+import uk.gov.hmrc.gform.graph.Evaluator
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.sharedmodel.SmartString
-import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
+import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, FormDataRecalculated, ThirdPartyData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.Section.RepeatingPage
+import uk.gov.hmrc.gform.sharedmodel.graph.GraphNode
+import uk.gov.hmrc.http.HeaderCarrier
 
 object ExpandRepeatedSection {
 
   def generateDynamicPages(
     page: Page[GroupExpanded],
     repeatingPage: Section.RepeatingPage,
-    data: FormDataRecalculated
-  ): List[Page[FullyExpanded]] =
+    data: FormDataRecalculated,
+    formModel: FormModel[GroupExpanded],
+    retrievals: MaterialisedRetrievals,
+    formTemplate: FormTemplate,
+    thirdPartyData: ThirdPartyData,
+    envelopeId: EnvelopeId
+  )(
+    implicit hc: HeaderCarrier
+  ): List[Page[FullyExpanded]] = {
+
+    val idEvaluator: Evaluator[Id] = new Evaluator[Id]((_, _, template, _) =>
+      throw new Exception(show"Cannot do eeitt prepop here! FormTemplate is ${template._id}"))
+
+    /* def eval(
+     * visSet: Set[GraphNode],
+     * fcId: FormComponentId,
+     * expr: Expr,
+     * dataLookup: VariadicFormData,
+     * retrievals: MaterialisedRetrievals,
+     * formTemplate: FormTemplate,
+     * thirdPartyData: ThirdPartyData,
+     * envelopeId: EnvelopeId) */
+
+    idEvaluator.eval(
+      Set.empty[GraphNode],
+      FormComponentId("dummy"),
+      repeatingPage.repeats.expr,
+      data.data,
+      retrievals,
+      formTemplate,
+      thirdPartyData,
+      envelopeId
+    )
+
+    /* val count = getRequestedCount(repeatingPage.repeats, formModel, data)
+     *
+     * (1 to count).map { i =>
+     *   copySection(section, i, data)
+     * }.toList */
+
     List.empty[Page[FullyExpanded]]
-  // TODO JoVl
-  /* def generateDynamicSections(
+  }
+
+  /* private def getRequestedCount2(
+ *   expr: TextExpression,
+ *   formModel: FormModel[GroupExpanded],
+ *   data: FormDataRecalculated): Int = {
+ *
+ *   val repeatingGroupsFound = findRepeatingGroupsContainingField(expr, formTemplate)
+ *
+ *   if (repeatingGroupsFound.isEmpty) {
+ *     evaluateExpression(expr.expr, formTemplate, data)
+ *   } else {
+ *     val groupFieldValue: FormComponent = repeatingGroupsFound.head
+ *
+ *     groupFieldValue match {
+ *       case IsGroup(group) =>
+ *         val groups: List[GroupList] = ExpandUtils.getAllFieldsInGroup(groupFieldValue, group, data)
+ *         groups.map(_.componentList.size).sum
+ *       case _ => 0
+ *     }
+ *   }
+ * }
+ *
+ * // TODO JoVl
+ * def generateDynamicSections(
  *   section: Section.RepeatingPage,
  *   formTemplate: FormTemplate,
  *   data: FormDataRecalculated): List[Singleton[FullyExpanded]] = {

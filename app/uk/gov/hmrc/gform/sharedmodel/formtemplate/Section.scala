@@ -26,27 +26,12 @@ import uk.gov.hmrc.gform.sharedmodel.{ SmartString, VariadicFormData }
 
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.JsonUtils.nelFormat
 
-case class ExpandedSection(expandedFormComponents: List[ExpandedFormComponent], includeIf: Option[IncludeIf]) {
-  def toExpandedFormTemplate: ExpandedFormTemplate = ExpandedFormTemplate(this :: Nil)
-  def allFCs: List[FormComponent] = toExpandedFormTemplate.allFormComponents
-}
-
-sealed trait TemporarySectionOpsForGforms364 {
-  def description: Option[SmartString]
-  def includeIf: Option[IncludeIf]
-
-  /* def expandSection(data: VariadicFormData): ExpandedSection =
- *   ExpandedSection(fields.map(_.expandFormComponent(data)), includeIf) // TODO expand sections
- *
- * def expandSectionRc(data: VariadicFormData): ExpandedSection =
- *   ExpandedSection(fields.map(_.expandFormComponentRc(data)), includeIf) // TODO expand sections */
-
-}
-
-sealed trait Section extends TemporarySectionOpsForGforms364 with Product with Serializable {
-  def title: SmartString
-  def expandSectionFull(): List[ExpandedSection]
-  //def expandedFormComponents(): List[FormComponent]
+sealed trait Section extends Product with Serializable {
+  def getTitle: SmartString = this match {
+    case Section.NonRepeatingPage(page)             => page.title
+    case Section.RepeatingPage(page, _)             => page.title
+    case Section.AddToList(_, title, _, _, _, _, _) => title
+  }
 
   def validators: Option[Validator] = this match {
     case Section.NonRepeatingPage(page)         => page.validators
@@ -77,34 +62,12 @@ sealed trait Section extends TemporarySectionOpsForGforms364 with Product with S
     case Section.RepeatingPage(page, _)         => page.continueIf.contains(Stop)
     case Section.AddToList(_, _, _, _, _, _, _) => true
   }
-
-  //def jsFormComponentModels: List[JsFormComponentModel] = fields.flatMap(_.jsFormComponentModels)
 }
 
 object Section {
-  case class NonRepeatingPage(page: Page[Basic]) extends Section {
-    override def title: SmartString = page.title
-    override def description: Option[SmartString] = page.description
-    //override def shortName: Option[SmartString] = page.shortName
-    //override def fields: List[FormComponent] = page.fields
-    override def includeIf: Option[IncludeIf] = page.includeIf
+  case class NonRepeatingPage(page: Page[Basic]) extends Section
 
-    override def expandSectionFull(): List[ExpandedSection] =
-      ExpandedSection(page.fields.map(_.expandFormComponentFull), page.includeIf) :: Nil
-    //override def expandedFormComponents(): List[FormComponent] = page.expandedFormComponents
-  }
-
-  case class RepeatingPage(page: Page[Basic], repeats: TextExpression) extends Section {
-    override def title: SmartString = page.title
-    override def description: Option[SmartString] = page.description
-    //override def shortName: Option[SmartString] = page.shortName
-    //override def fields: List[FormComponent] = page.fields
-    override def includeIf: Option[IncludeIf] = page.includeIf
-
-    override def expandSectionFull(): List[ExpandedSection] =
-      ExpandedSection(page.fields.map(_.expandFormComponentFull), page.includeIf) :: Nil // TODO expand repeats
-    //override def expandedFormComponents(): List[FormComponent] = page.expandedFormComponents
-  }
+  case class RepeatingPage(page: Page[Basic], repeats: TextExpression) extends Section
 
   case class AddToList(
     id: AddToListId,
@@ -114,15 +77,7 @@ object Section {
     includeIf: Option[IncludeIf],
     repeatsMax: Option[TextExpression],
     pages: NonEmptyList[Page[Basic]]
-  ) extends Section {
-
-    // ToDo Lance - Some of these need to be implemented and some need to be removed
-    override def expandSectionFull(): List[ExpandedSection] =
-      pages.toList.map(page => ExpandedSection(page.fields.map(_.expandFormComponentFull), page.includeIf))
-    //override def fields: List[FormComponent] = pages.toList.flatMap(_.expandedFormComponents)
-
-    //override lazy val expandedFormComponents: List[FormComponent] = pages.toList.flatMap(_.expandedFormComponents)
-  }
+  ) extends Section
 
   implicit val format: OFormat[Section] = derived.oformat[Section]
 }

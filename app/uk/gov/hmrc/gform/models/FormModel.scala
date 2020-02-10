@@ -16,12 +16,14 @@
 
 package uk.gov.hmrc.gform.models
 
+import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.graph.RecData
 import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
-import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, ExpandedFormComponent, ExpandedFormTemplate, FormComponent, FormComponentId, FormTemplate, FullyExpanded, GroupExpanded, IncludeIf, Page, PageMode, Section, SectionNumber }
+import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, FormDataRecalculated, ThirdPartyData }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, Exhaustive, ExpandedFormComponent, FormComponent, FormComponentId, FormTemplate, FullyExpanded, GroupExpanded, IncludeIf, Page, PageMode, Section, SectionNumber }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.Section.{ AddToList, NonRepeatingPage, RepeatingPage }
+import uk.gov.hmrc.http.HeaderCarrier
 
 case class FormModel[A <: PageMode](pages: List[PageModel[A]]) extends AnyVal {
   def apply(sectionNumber: SectionNumber): PageModel[A] = pages(sectionNumber.value)
@@ -32,11 +34,10 @@ case class FormModel[A <: PageMode](pages: List[PageModel[A]]) extends AnyVal {
     case (section, index) if data.isVisible(section) => (section, SectionNumber(index))
   }
 
-  def expand(data: FormDataRecalculated): ExpandedFormTemplate = ???
+  def toLookup: Map[FormComponentId, FormComponent] =
+    allFormComponents.map(fc => fc.id -> fc).toMap
 
-  def expandFull: ExpandedFormTemplate = ???
-
-  def allFormComponents: List[FormComponent] = ???
+  def allFormComponents: List[FormComponent] = pages.flatMap(_.allFormComponents)
   def allFormComponentIds: List[FormComponentId] = allFormComponents.map(_.id)
 
   def allIncludeIfs: List[(List[FormComponent], IncludeIf, Int)] = pages.zipWithIndex.collect {
@@ -51,25 +52,39 @@ object HasIncludeIf {
     pageModel.fold(_.page.includeIf)(_.includeIf)
 }
 
-object FormModel {
+object FormModelBuilder {
+  def fromCache(cache: AuthCacheWithForm): FormModelBuilder =
+    new FormModelBuilder(cache.retrievals, cache.formTemplate, cache.form.thirdPartyData, cache.form.envelopeId)
+}
 
-  def empty[A <: PageMode]: FormModel[A] = FormModel[A](List.empty[PageModel[A]])
+class FormModelBuilder(
+  retrievals: MaterialisedRetrievals,
+  formTemplate: FormTemplate,
+  thirdPartyData: ThirdPartyData,
+  envelopeId: EnvelopeId
+) {
 
-  def fromRawData(rawData: VariadicFormData, formTemplate: FormTemplate) = {
+  def fromRawData(
+    rawData: VariadicFormData
+  )(
+    implicit hc: HeaderCarrier
+  ): FormModel[FullyExpanded] = {
     val data = FormDataRecalculated(Set.empty, RecData.fromData(rawData))
-    FormModel.expand(formTemplate, data)
+    expand(data)
   }
 
-  def fromCache(cache: AuthCacheWithForm) = fromRawData(cache.variadicFormData, cache.formTemplate)
-
-  def expand(formTemplate: FormTemplate, data: FormDataRecalculated): FormModel[FullyExpanded] = {
-    val basicFm: FormModel[Basic] = basic(formTemplate)
+  def expand(
+    data: FormDataRecalculated
+  )(
+    implicit hc: HeaderCarrier
+  ): FormModel[FullyExpanded] = {
+    val basicFm: FormModel[Basic] = basic()
     val groupsFm: FormModel[GroupExpanded] = expandGroups(basicFm, data)
     val fullyExpandedFm: FormModel[FullyExpanded] = formModel(groupsFm, data)
     fullyExpandedFm
   }
 
-  def basic(formTemplate: FormTemplate): FormModel[Basic] = FormModel[Basic] {
+  def basic(): FormModel[Basic] = FormModel[Basic] {
     formTemplate.sections
       .flatMap {
         case s: Section.NonRepeatingPage => List(Singleton[Basic](s.page, s))
@@ -89,8 +104,13 @@ object FormModel {
   def expandRepeatedSection(
     page: Page[GroupExpanded],
     repeatingPage: Section.RepeatingPage,
-    data: FormDataRecalculated): List[Page[FullyExpanded]] =
-    ExpandRepeatedSection.generateDynamicPages(page, repeatingPage, data)
+    data: FormDataRecalculated,
+    formModel: FormModel[GroupExpanded]
+  )(
+    implicit hc: HeaderCarrier
+  ): List[Page[FullyExpanded]] =
+    ExpandRepeatedSection
+      .generateDynamicPages(page, repeatingPage, data, formModel, retrievals, formTemplate, thirdPartyData, envelopeId)
 
   def expandGroups(formModel: FormModel[Basic], data: FormDataRecalculated): FormModel[GroupExpanded] =
     FormModel {
@@ -101,7 +121,12 @@ object FormModel {
       }
     }
 
-  def formModel(formModel: FormModel[GroupExpanded], data: FormDataRecalculated): FormModel[FullyExpanded] =
+  def formModel(
+    formModel: FormModel[GroupExpanded],
+    data: FormDataRecalculated
+  )(
+    implicit hc: HeaderCarrier
+  ): FormModel[FullyExpanded] =
     FormModel {
       formModel.pages.flatMap {
         case Singleton(page, source) =>
@@ -109,7 +134,7 @@ object FormModel {
             case s: Section.NonRepeatingPage =>
               List(Singleton[FullyExpanded](page.asInstanceOf[Page[FullyExpanded]], source))
             case s: Section.RepeatingPage =>
-              expandRepeatedSection(page, s, data).map(Singleton[FullyExpanded](_, source))
+              expandRepeatedSection(page, s, data, formModel).map(Singleton[FullyExpanded](_, source))
             case s: Section.AddToList => List(Singleton[FullyExpanded](page.asInstanceOf[Page[FullyExpanded]], source))
           }
 
@@ -125,4 +150,17 @@ object FormModel {
      *
      *   } */
     }
+
+}
+
+object FormModel {
+
+  def empty[A <: PageMode]: FormModel[A] = FormModel[A](List.empty[PageModel[A]])
+
+  def expandFull(formTemplate: FormTemplate): FormModel[Exhaustive] = ???
+
+  def fromCache(cache: AuthCacheWithForm)(
+    implicit hc: HeaderCarrier
+  ): FormModel[FullyExpanded] = FormModelBuilder.fromCache(cache).fromRawData(cache.variadicFormData)
+
 }

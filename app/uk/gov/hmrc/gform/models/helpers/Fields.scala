@@ -167,7 +167,7 @@ object Fields {
     data: FormDataRecalculated,
     lookupExtractors: LookupExtractors): (List[FormComponent], FormDataRecalculated) = {
     val renderList: List[PageModel[FullyExpanded]] = formModel.pages.filterNot(_ == singleton)
-    val sectionAtomicFields: List[FormComponent] = FormModel(renderList).expand(data).allFormComponents
+    val sectionAtomicFields: List[FormComponent] = formModel.allFormComponents
 
     val submitted = submittedFCs(data, sectionAtomicFields)
     val alwaysEmptyHiddenGroup = getAlwaysEmptyHiddenGroup(data, singleton, lookupExtractors)

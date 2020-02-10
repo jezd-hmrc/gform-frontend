@@ -655,7 +655,7 @@ class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks with Fo
     val data = mkFormDataRecalculatedUsingUpperCaseFormComponentIdForValue("a", "b", "c", "1_a", "1_b", "1_c", "e", "f")
 
     val singleton = getSingleton(section, data)
-    val formModel = getFormModel(sections, data)
+    val formModel = mkFormModel(sections, data)
 
     val (hiddenFormComponent, dataUpd) = Fields.getHiddenTemplateFields(singleton, formModel, data, lookupExtractors)
 
@@ -693,7 +693,7 @@ class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks with Fo
     val data = mkFormDataRecalculatedUsingUpperCaseFormComponentIdForValue("a", "b", "c")
 
     val singleton = getSingleton(section, data)
-    val formModel = getFormModel(sections, data)
+    val formModel = mkFormModel(sections, data)
 
     val (hiddenFormComponent, dataUpd) = Fields.getHiddenTemplateFields(singleton, formModel, data, lookupExtractors)
 

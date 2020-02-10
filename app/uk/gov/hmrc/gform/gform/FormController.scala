@@ -235,14 +235,14 @@ class FormController(
         def processAddGroup(processData: ProcessData, groupId: String): Future[Result] = {
           val startPos = groupId.indexOf('-') + 1
           val groupComponentId = FormComponentId(groupId.substring(startPos))
-          val maybeGroupFc = findFormComponent(groupComponentId, processData.formModel, processData.data)
+          val maybeGroupFc = findFormComponent(groupComponentId, processData.formModel)
           val (updatedData, anchor) = addNextGroup(maybeGroupFc, processData.data, lookupExtractors)
 
           handleGroup(processData.copy(data = updatedData), anchor.map("#" + _).getOrElse(""))
         }
 
         def processRemoveGroup(processData: ProcessData, idx: Int, groupId: String): Future[Result] = {
-          val maybeGroupFc = findFormComponent(FormComponentId(groupId), processData.formModel, processData.data)
+          val maybeGroupFc = findFormComponent(FormComponentId(groupId), processData.formModel)
           val updatedData = removeGroupFromData(idx, maybeGroupFc, processData.data)
 
           handleGroup(processData.copy(data = updatedData), "")

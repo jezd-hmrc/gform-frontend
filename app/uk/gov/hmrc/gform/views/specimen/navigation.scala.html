@@ -26,7 +26,7 @@
 
 @navigationLink(sectionIndex: Int, label: String, templateId: String) = {
   @defining(formTemplate.sections(sectionIndex)) { section =>
-    @defining(SectionTitle4Ga.sectionTitle4GaFactory(section.title.value).value) { sectionTitle4Ga =>
+    @defining(SectionTitle4Ga.sectionTitle4GaFactory(section.getTitle.value).value) { sectionTitle4Ga =>
       <a href="/submissions/form/@templateId/@sectionTitle4Ga?n=@sectionIndex&se=t">@label</a>
     }
   }
@@ -46,7 +46,7 @@
 
   <select id="specimenNavigation">
     @formTemplate.sections.zipWithIndex.map { case (section, sectionIndex) =>
-      @defining(section.title.value, if(sectionNumber === sectionIndex) "selected" else "") { case (title, selected) =>
+      @defining(section.getTitle.value, if(sectionNumber === sectionIndex) "selected" else "") { case (title, selected) =>
 	@defining(
 	  SectionTitle4Ga.sectionTitle4GaFactory(title).value,
 	  title.substring(0, Math.min(title.length, 80))) { case (sectionTitle4Ga, titleTrimmed) =>

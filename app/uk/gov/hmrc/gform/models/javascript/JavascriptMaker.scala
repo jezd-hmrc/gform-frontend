@@ -29,7 +29,7 @@ object JavascriptMaker {
     formTemplate: FormTemplate): String = {
     val pageModel = formModel(sectionNumber)
     val jsFormComponentModels = pageModel.jsFormComponentModels
-    val allAtomicFields = formModel.expandFull.allFormComponents //flatMap(RepeatingComponentService.atomicFieldsFull)
+    val allAtomicFields = FormModel.expandFull(formTemplate).allFormComponents //flatMap(RepeatingComponentService.atomicFieldsFull)
 
     createJavascript(pageModel, jsFormComponentModels, allAtomicFields, mkDependencies(formTemplate))
 

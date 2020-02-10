@@ -278,6 +278,7 @@ class ValidationService(
   }
 
   def validateForm(
+    formModel: FormModel[FullyExpanded],
     cache: AuthCacheWithForm,
     envelope: Envelope,
     retrievals: MaterialisedRetrievals
@@ -303,7 +304,6 @@ class ValidationService(
                cache.form.envelopeId
              )
       //allSections = RepeatingComponentService.getAllSections(cache.formTemplate, data)
-      formModel = FormModel.expand(cache.formTemplate, data)
       visibleFormModel = filterPages(formModel, data)
       allFields = visibleFormModel.allFormComponents
       allRequiredFields = allFields.filter(_.mandatory)

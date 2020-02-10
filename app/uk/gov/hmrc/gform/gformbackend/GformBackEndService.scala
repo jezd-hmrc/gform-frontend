@@ -49,11 +49,15 @@ trait GformBackEndAlgebra[F[_]] {
     cache: AuthCacheWithForm,
     maybeAccessCode: Option[AccessCode],
     submissionDetails: Option[SubmissionDetails],
-    attachments: Attachments)(
-    implicit request: Request[_],
+    attachments: Attachments,
+    formModel: FormModel[FullyExpanded]
+  )(
+    implicit
+    request: Request[_],
     l: LangADT,
     hc: HeaderCarrier,
-    lise: SmartStringEvaluator): F[(HttpResponse, CustomerId)]
+    lise: SmartStringEvaluator
+  ): F[(HttpResponse, CustomerId)]
 
   def updateUserData(updatedForm: Form, maybeAccessCode: Option[AccessCode])(implicit hc: HeaderCarrier): F[Unit]
 
@@ -93,7 +97,8 @@ class GformBackEndService(
     cache: AuthCacheWithForm,
     maybeAccessCode: Option[AccessCode],
     submissionDetails: Option[SubmissionDetails],
-    attachments: Attachments
+    attachments: Attachments,
+    formModel: FormModel[FullyExpanded]
   )(
     implicit
     request: Request[_],
@@ -104,8 +109,7 @@ class GformBackEndService(
     for {
       _          <- updateUserData(cache.form.copy(status = formStatus), maybeAccessCode)
       customerId <- customerIdRecalculation.evaluateCustomerId(cache)
-      formModel: FormModel[FullyExpanded] = FormModel.fromCache(cache)
-      response <- handleSubmission(maybeAccessCode, cache, customerId, submissionDetails, attachments, formModel)
+      response   <- handleSubmission(maybeAccessCode, cache, customerId, submissionDetails, attachments, formModel)
     } yield (response, customerId)
 
   def forceUpdateFormStatus(formId: FormIdData, status: FormStatus)(implicit hc: HeaderCarrier): Future[Unit] =

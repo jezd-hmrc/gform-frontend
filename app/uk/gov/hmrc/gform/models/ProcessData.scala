@@ -117,7 +117,7 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
                                  cache.form.thirdPartyData,
                                  cache.form.envelopeId)
     } yield {
-      val formModel = FormModel.expand(cache.formTemplate, formDataRecalculated)
+      val formModel: FormModel[FullyExpanded] = FormModelBuilder.fromCache(cache).expand(formDataRecalculated)
       (formDataRecalculated, formModel)
     }
 

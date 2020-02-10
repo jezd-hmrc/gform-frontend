@@ -21,18 +21,17 @@ import uk.gov.hmrc.gform.Helpers.toSmartString
 import uk.gov.hmrc.gform.graph.FormTemplateBuilder._
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, FormComponent, Section }
 
-class FormModelBasicSpec extends FlatSpec with Matchers {
+class FormModelBasicSpec extends FlatSpec with Matchers with FormModelSupport {
+
   "FormModel.basic" should "expand from formTemplate" in {
-    val formTemplate = mkFormTemplate(List.empty[Section])
-    val formModel = FormModel.basic(formTemplate)
+    val formModel = mkFormModelBasic(List.empty[Section])
 
     formModel shouldBe FormModel[Basic](List.empty[PageModel[Basic]])
   }
 
   it should "expand Section.NonRepeatingPage" in {
     val nonRepeatingPage: Section.NonRepeatingPage = mkSection(List.empty[FormComponent])
-    val formTemplate = mkFormTemplate(List(nonRepeatingPage))
-    val formModel = FormModel.basic(formTemplate)
+    val formModel = mkFormModelBasic(List(nonRepeatingPage))
 
     val expected = FormModel(List(Singleton(nonRepeatingPage.page, nonRepeatingPage)))
 
@@ -41,8 +40,7 @@ class FormModelBasicSpec extends FlatSpec with Matchers {
 
   it should "expand Section.RepeatingPage" in {
     val repeatingPage: Section.RepeatingPage = mkRepeatingPageSection(List.empty[FormComponent])
-    val formTemplate = mkFormTemplate(List(repeatingPage))
-    val formModel = FormModel.basic(formTemplate)
+    val formModel = mkFormModelBasic(List(repeatingPage))
 
     val expected = FormModel(List(Singleton(repeatingPage.page, repeatingPage)))
 
@@ -51,8 +49,7 @@ class FormModelBasicSpec extends FlatSpec with Matchers {
 
   it should "expand Section.AddToList with one list-filler page" in {
     val addToList: Section.AddToList = mkAddToListSection(List.empty[FormComponent])
-    val formTemplate = mkFormTemplate(List(addToList))
-    val formModel = FormModel.basic(formTemplate)
+    val formModel = mkFormModelBasic(List(addToList))
 
     val expected = FormModel[Basic](
       List(
@@ -65,8 +62,7 @@ class FormModelBasicSpec extends FlatSpec with Matchers {
   }
   it should "expand Section.AddToList with two list-filler pages" in {
     val addToList: Section.AddToList = mkAddToListSection(List.empty[FormComponent], List.empty[FormComponent])
-    val formTemplate = mkFormTemplate(List(addToList))
-    val formModel = FormModel.basic(formTemplate)
+    val formModel = mkFormModelBasic(List(addToList))
 
     val expected = FormModel[Basic](
       List(
@@ -82,9 +78,7 @@ class FormModelBasicSpec extends FlatSpec with Matchers {
   it should "expand Section.AddToList with three list-filler pages" in {
     val addToList: Section.AddToList =
       mkAddToListSection(List.empty[FormComponent], List.empty[FormComponent], List.empty[FormComponent])
-    val formTemplate = mkFormTemplate(List(addToList))
-    val formModel = FormModel.basic(formTemplate)
-
+    val formModel = mkFormModelBasic(List(addToList))
     val expected = FormModel[Basic](
       List(
         Singleton(addToList.pages.toList(0), addToList),

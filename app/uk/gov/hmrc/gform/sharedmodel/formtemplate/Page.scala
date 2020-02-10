@@ -23,6 +23,7 @@ sealed trait PageMode extends Product with Serializable
 trait Basic extends PageMode
 trait GroupExpanded extends PageMode
 trait FullyExpanded extends PageMode
+trait Exhaustive extends PageMode
 
 case class Page[A <: PageMode](
   title: SmartString,

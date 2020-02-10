@@ -25,16 +25,13 @@ import uk.gov.hmrc.gform.sharedmodel.VariadicValue.One
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, FormComponent, FormComponentId, GroupExpanded, Page, Section, Value }
 
-class FormModelGroupExpandedSpec extends FlatSpec with Matchers {
+class FormModelGroupExpandedSpec extends FlatSpec with Matchers with FormModelSupport {
   "FormModel.expandGroup" should "expand groups in Section.NonRepeatingPage" in {
     val fcA = mkFormComponent("a", Value)
     val fcB = mkFormComponent("b", Value)
     val group: FormComponent = mkFormComponent("group", mkGroup(5, List(fcA, fcB)))
     val nonRepeatingPage: Section.NonRepeatingPage = mkSection(group)
-    val formTemplate = mkFormTemplate(List(nonRepeatingPage))
-    val basicFormModel = FormModel.basic(formTemplate)
-    val data = FormDataRecalculated.empty
-    val formModel = FormModel.expandGroups(basicFormModel, data)
+    val formModel = mkFormModelExpandGroups(List(nonRepeatingPage))
 
     val expectedPage = Page[GroupExpanded](
       toSmartString("Section Name"),
@@ -59,8 +56,6 @@ class FormModelGroupExpandedSpec extends FlatSpec with Matchers {
 
     val group: FormComponent = mkFormComponent("group", mkGroup(5, List(fcA, fcB)))
     val nonRepeatingPage: Section.NonRepeatingPage = mkSection(group)
-    val formTemplate = mkFormTemplate(List(nonRepeatingPage))
-    val basicFormModel = FormModel.basic(formTemplate)
 
     val data = mkFormDataRecalculated(
       "a"         -> "1_A",
@@ -72,7 +67,7 @@ class FormModelGroupExpandedSpec extends FlatSpec with Matchers {
       "unrelated" -> "UNRELATED"
     )
 
-    val formModel = FormModel.expandGroups(basicFormModel, data)
+    val formModel = mkFormModelExpandGroups(List(nonRepeatingPage), data)
     val expectedFCs = ("1_a" :: "1_b" :: "2_a" :: "2_b" :: Nil).map(mkFormComponent(_, Value))
 
     val expectedPage = Page[GroupExpanded](

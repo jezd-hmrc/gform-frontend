@@ -19,7 +19,7 @@ package uk.gov.hmrc.gform.models
 import uk.gov.hmrc.gform.models.javascript.JsFormComponentModel
 import uk.gov.hmrc.gform.sharedmodel.SmartString
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ ExpandedSection, FullyExpanded, IncludeIf, Page, PageMode, Section }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponent, FullyExpanded, IncludeIf, Page, PageMode, Section }
 
 sealed trait PageModel[A <: PageMode] extends Product with Serializable {
   def title: SmartString = this match {
@@ -37,7 +37,7 @@ sealed trait PageModel[A <: PageMode] extends Product with Serializable {
   }
 
   def expand(formDataRecalculated: FormDataRecalculated): PageModel[FullyExpanded] = ???
-  def expandSectionRc(formDataRecalculated: FormDataRecalculated): ExpandedSection = ???
+  //def expandSectionRc(formDataRecalculated: FormDataRecalculated): ExpandedSection = ???
 
   def jsFormComponentModels: List[JsFormComponentModel] = this match {
     case Singleton(page, _)      => page.fields.flatMap(_.jsFormComponentModels)
@@ -48,6 +48,8 @@ sealed trait PageModel[A <: PageMode] extends Product with Serializable {
     case s: Singleton[A] => f(s)
     case r: Repeater[A]  => g(r)
   }
+
+  def allFormComponents: List[FormComponent] = ???
 
 }
 

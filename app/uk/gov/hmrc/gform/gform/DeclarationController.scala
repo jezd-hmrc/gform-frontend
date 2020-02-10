@@ -32,7 +32,7 @@ import uk.gov.hmrc.gform.graph.{ RecData, Recalculation }
 import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.models.helpers.Fields
 import uk.gov.hmrc.gform.sharedmodel.form._
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FullyExpanded, _ }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, LangADT, VariadicFormData }
 import uk.gov.hmrc.gform.summarypdf.PdfGeneratorService
 import uk.gov.hmrc.gform.validation.ValidationUtil.{ GformError, ValidatedType }
@@ -111,6 +111,7 @@ class DeclarationController(
     import i18nSupport._
 
     val declarationData = FormDataRecalculated(Set.empty, RecData.fromData(dataRaw))
+
     for {
       tuple <- removeHiddenSectionDataAndCalculateAttachments(cache, envelope)
       (cacheWithHiddenSectionDataRemoved, attachments) = tuple
@@ -183,20 +184,23 @@ class DeclarationController(
     cache: AuthCacheWithForm,
     data: FormDataRecalculated,
     maybeAccessCode: Option[AccessCode],
-    attachments: Attachments)(
+    attachments: Attachments
+  )(
     implicit
     request: Request[_],
     l: LangADT,
-    lise: SmartStringEvaluator): Future[Result] = {
+    lise: SmartStringEvaluator
+  ): Future[Result] = {
     import i18nSupport._
 
     cache.formTemplate.destinations match {
       case _: DestinationList => {
+        val formModel: FormModel[FullyExpanded] = FormModel.fromCache(cache)
         val updatedCache = cache.copy(form = updateFormWithDeclaration(cache.form, cache.formTemplate, data))
         gformBackEnd
-          .submitWithUpdatedFormStatus(Signed, updatedCache, maybeAccessCode, None, attachments)
+          .submitWithUpdatedFormStatus(Signed, updatedCache, maybeAccessCode, None, attachments, formModel)
           .map {
-            case (_, customerId) => showAcknowledgement(updatedCache, maybeAccessCode, customerId)
+            case (_, customerId) => showAcknowledgement(updatedCache, maybeAccessCode, customerId, formModel)
           }
       }
 
@@ -211,26 +215,29 @@ class DeclarationController(
   private def showAcknowledgement(
     cache: AuthCacheWithForm,
     maybeAccessCode: Option[AccessCode],
-    customerId: CustomerId)(implicit request: Request[_]) = {
+    customerId: CustomerId,
+    formModel: FormModel[FullyExpanded]
+  )(implicit request: Request[_]) = {
     if (customerId.isEmpty)
       Logger.warn(s"DMS submission with empty customerId ${loggingHelpers.cleanHeaderCarrierHeader(hc)}")
 
-    val submissionEventId = auditSubmissionEvent(cache, customerId)
+    val submissionEventId = auditSubmissionEvent(cache, customerId, formModel)
 
     Redirect(
       uk.gov.hmrc.gform.gform.routes.AcknowledgementController
         .showAcknowledgement(maybeAccessCode, cache.form.formTemplateId))
   }
 
-  private def auditSubmissionEvent(cache: AuthCacheWithForm, customerId: CustomerId)(implicit request: Request[_]) = {
-    val formModel: FormModel[FullyExpanded] = ???
+  private def auditSubmissionEvent(
+    cache: AuthCacheWithForm,
+    customerId: CustomerId,
+    formModel: FormModel[FullyExpanded])(implicit request: Request[_]) =
     auditService.sendSubmissionEvent(
       cache.form,
       //cache.formTemplate.sections :+ cache.formTemplate.declarationSection,
       formModel,
       cache.retrievals,
       customerId)
-  }
 
   private def createHtmlForInvalidSubmission(
     maybeAccessCode: Option[AccessCode],

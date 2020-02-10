@@ -27,6 +27,7 @@ import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.fileupload.Attachments
 import uk.gov.hmrc.gform.gformbackend.GformBackEndAlgebra
 import uk.gov.hmrc.gform.lookup.LookupRegistry
+import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.sharedmodel.form.FormIdData
 import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, BundledFormSubmissionData, LangADT, SubmissionRef }
 import uk.gov.hmrc.gform.sharedmodel.form.{ Accepting, Form, FormStatus, Returning }
@@ -92,7 +93,8 @@ class ReviewService[F[_]](gformBackEnd: GformBackEndAlgebra[F], lookupRegistry: 
                  cache,
                  maybeAccessCode,
                  Some(SubmissionDetails(submission, "")),
-                 Attachments.empty)
+                 Attachments.empty,
+                 FormModel.fromCache(cache))
     } yield result._1
 
   private def buildFormDataToSubmit(formIds: NonEmptyList[FormIdData])(

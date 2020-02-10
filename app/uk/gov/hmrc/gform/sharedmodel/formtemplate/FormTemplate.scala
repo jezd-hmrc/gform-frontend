@@ -23,18 +23,18 @@ import uk.gov.hmrc.gform.sharedmodel.{ AvailableLanguages, LocalisedString, Vari
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.destinations.Destinations
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.destinations.Destinations.DestinationList
 
-case class ExpandedFormTemplate(expandedSection: List[ExpandedSection]) {
-  val allFormComponents: List[FormComponent] =
-    expandedSection.flatMap(_.expandedFormComponents.flatMap(_.formComponents))
-  val allFormComponentIds: List[FormComponentId] = expandedSection.flatMap(_.expandedFormComponents.flatMap(_.allIds))
-  /* def formComponentsLookup(data: VariadicFormData): Map[FormComponentId, FormComponent] =
-   *   allFormComponents.flatMap(fc => fc.expandFormComponent(data).allIds.map(_ -> fc)).toMap */
-  def formComponentsLookupFull: Map[FormComponentId, FormComponent] =
-    allFormComponents.flatMap(fc => fc.expandFormComponentFull.allIds.map(_ -> fc)).toMap
-  /* val allIncludeIfs: List[(List[ExpandedFormComponent], IncludeIf, Int)] = expandedSection.zipWithIndex.collect {
- *   case (ExpandedSection(expandedFormComponents, Some(includeIf)), index) => (expandedFormComponents, includeIf, index)
+/* case class ExpandedFormTemplate(expandedSection: List[ExpandedSection]) {
+ *   val allFormComponents: List[FormComponent] =
+ *     expandedSection.flatMap(_.expandedFormComponents.flatMap(_.formComponents))
+ *   val allFormComponentIds: List[FormComponentId] = expandedSection.flatMap(_.expandedFormComponents.flatMap(_.allIds))
+ *   def formComponentsLookup(data: VariadicFormData): Map[FormComponentId, FormComponent] =
+ *     allFormComponents.flatMap(fc => fc.expandFormComponent(data).allIds.map(_ -> fc)).toMap
+ *   def formComponentsLookupFull: Map[FormComponentId, FormComponent] =
+ *     allFormComponents.flatMap(fc => fc.expandFormComponentFull.allIds.map(_ -> fc)).toMap
+ *   val allIncludeIfs: List[(List[ExpandedFormComponent], IncludeIf, Int)] = expandedSection.zipWithIndex.collect {
+ *     case (ExpandedSection(expandedFormComponents, Some(includeIf)), index) => (expandedFormComponents, includeIf, index)
+ *   }
  * } */
-}
 
 case class FormTemplate(
   _id: FormTemplateId,
@@ -68,7 +68,7 @@ case class FormTemplate(
   /* def expandFormTemplate(data: VariadicFormData): ExpandedFormTemplate =
    *   ExpandedFormTemplate(sections.map(_.expandSection(data))) */
 
-  val expandFormTemplateFull: ExpandedFormTemplate = ExpandedFormTemplate(sections.flatMap(_.expandSectionFull))
+  //val expandFormTemplateFull: ExpandedFormTemplate = ExpandedFormTemplate(sections.flatMap(_.expandSectionFull))
 }
 
 object FormTemplate {

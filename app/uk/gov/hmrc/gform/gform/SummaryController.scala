@@ -30,6 +30,7 @@ import uk.gov.hmrc.gform.controllers.{ AuthenticatedRequestActionsAlgebra, ErrRe
 import uk.gov.hmrc.gform.fileupload.FileUploadService
 import uk.gov.hmrc.gform.gformbackend.GformConnector
 import uk.gov.hmrc.gform.graph.Recalculation
+import uk.gov.hmrc.gform.models.{ FormModel, FormModelBuilder }
 import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, LangADT, PdfHtml }
 import uk.gov.hmrc.gform.sharedmodel.form._
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
@@ -73,9 +74,12 @@ class SummaryController(
       implicit request: Request[AnyContent] => implicit l => cache => implicit sse =>
         processResponseDataFromBody(request, cache.formTemplate) { dataRaw =>
           val envelopeF = fileUploadService.getEnvelope(cache.form.envelopeId)
+
+          val formModel: FormModel[FullyExpanded] = FormModelBuilder.fromCache(cache).fromRawData(dataRaw)
+//              val formModel = FormModel.expand(formTemplate, data)
           val formFieldValidationResultsF = for {
             envelope <- envelopeF
-            errors   <- validationService.validateForm(cache, envelope, cache.retrievals)
+            errors   <- validationService.validateForm(formModel, cache, envelope, cache.retrievals)
           } yield errors
 
           val isFormValidF: Future[Boolean] = formFieldValidationResultsF.map(x => ValidationUtil.isFormValid(x._2))

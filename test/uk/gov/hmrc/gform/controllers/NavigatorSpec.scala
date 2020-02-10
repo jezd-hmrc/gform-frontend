@@ -20,18 +20,15 @@ import org.scalatest.mockito.MockitoSugar.mock
 import uk.gov.hmrc.gform.Spec
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.graph.RecData
-import uk.gov.hmrc.gform.models.FormModel
+import uk.gov.hmrc.gform.models.{ FormModel, FormModelSupport }
 import uk.gov.hmrc.gform.sharedmodel.ExampleData
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponentId, IncludeIf, IsFalse, Section }
 import uk.gov.hmrc.gform.sharedmodel.graph.IncludeIfGN
 
-class SaveSpec extends Spec {
+class SaveSpec extends Spec with FormModelSupport {
 
   behavior of "navigate - Save"
-
-  private def mkFormModel(sections: List[Section], formDataRecalculated: FormDataRecalculated) = // TODO JoVl move to FormModelSupport
-    FormModel.expand(formTemplate.copy(sections = allSections), formDataRecalculated)
 
   it should "all sections are included" in new Fixture {
     override def data = super.data + (`fieldId - save` -> `formField - Save`)

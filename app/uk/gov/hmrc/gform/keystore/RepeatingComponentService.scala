@@ -204,7 +204,7 @@ object RepeatingComponentService {
     ??? // TODO JoVl
   //singleton.expand(data).expandedFormComponents.flatMap(_.formComponents)
 
-  def atomicFieldsFull(section: Section): List[FormComponent] =
-    section.expandSectionFull.flatMap(_.expandedFormComponents.flatMap(_.formComponents))
+  /* def atomicFieldsFull(section: Section): List[FormComponent] =
+ *   section.expandSectionFull.flatMap(_.expandedFormComponents.flatMap(_.formComponents)) */
 
 }
