@@ -31,7 +31,7 @@ import uk.gov.hmrc.gform.gform.handlers.FormControllerRequestHandler
 import uk.gov.hmrc.gform.gformbackend.GformConnector
 import uk.gov.hmrc.gform.lookup.LookupExtractors
 import uk.gov.hmrc.gform.models.ExpandUtils._
-import uk.gov.hmrc.gform.models.{ Repeater, Singleton }
+import uk.gov.hmrc.gform.models.{ AddToListUtils, Repeater, Singleton }
 import uk.gov.hmrc.gform.models.gform.{ FormValidationOutcome, NoSpecificAction }
 import uk.gov.hmrc.gform.models.{ ProcessData, ProcessDataService }
 import uk.gov.hmrc.gform.sharedmodel._
@@ -259,16 +259,22 @@ class FormController(
           handleGroup(processData.copy(data = updatedData), "")
         }
 
+        def processRemoveAddToList(processData: ProcessData, idx: Int, addToListId: AddToListId): Future[Result] = {
+          val upd = AddToListUtils.removeRecord(processData, idx, addToListId)
+          Future.successful(Ok("Remove idx: " + idx + " of " + addToListId))
+        }
+
         for {
           processData <- processDataService
                           .getProcessData(dataRaw, cache, gformConnector.getAllTaxPeriods, NoSpecificAction)
           nav = Navigator(sectionNumber, processData.formModel, processData.data).navigate
           res <- nav match {
-                  case SaveAndContinue           => processSaveAndContinue(processData)
-                  case SaveAndExit               => processSaveAndExit(processData)
-                  case Back(sn)                  => processBack(processData, sn)
-                  case AddGroup(groupId)         => processAddGroup(processData, groupId)
-                  case RemoveGroup(idx, groupId) => processRemoveGroup(processData, idx, groupId)
+                  case SaveAndContinue                   => processSaveAndContinue(processData)
+                  case SaveAndExit                       => processSaveAndExit(processData)
+                  case Back(sn)                          => processBack(processData, sn)
+                  case AddGroup(groupId)                 => processAddGroup(processData, groupId)
+                  case RemoveGroup(idx, groupId)         => processRemoveGroup(processData, idx, groupId)
+                  case RemoveAddToList(idx, addToListId) => processRemoveAddToList(processData, idx, addToListId)
                 }
         } yield res
       }
