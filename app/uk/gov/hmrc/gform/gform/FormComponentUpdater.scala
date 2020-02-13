@@ -18,22 +18,12 @@ package uk.gov.hmrc.gform.gform
 
 import cats.instances.int._
 import cats.syntax.eq._
+import uk.gov.hmrc.gform.models.ExpandUtils
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 
 class FormComponentUpdater(formComponent: FormComponent, index: Int, baseIds: List[FormComponentId]) {
 
-  private def expandFcId(fcId: FormComponentId): FormComponentId =
-    if (baseIds.contains(fcId) && index =!= 0) FormComponentId(index + "_" + fcId.value) else fcId
-
-  private def expandExpr(expr: Expr): Expr = expr match {
-    case Add(field1, field2)         => Add(expandExpr(field1), expandExpr(field2))
-    case Multiply(field1, field2)    => Multiply(expandExpr(field1), expandExpr(field2))
-    case Subtraction(field1, field2) => Subtraction(expandExpr(field1), expandExpr(field2))
-    case Else(field1, field2)        => Else(expandExpr(field1), expandExpr(field2))
-    case f @ FormCtx(value)          => FormCtx(expandFcId(f.toFieldId).value)
-    case Sum(field1)                 => Sum(expandExpr(field1))
-    case otherwise                   => otherwise
-  }
+  private def expandExpr(expr: Expr): Expr = ExprUpdater(expr, index, baseIds).updated
 
   private def expandBooleanExpr(expr: BooleanExpr): BooleanExpr = expr match {
     case Equals(left, right)              => Equals(expandExpr(left), expandExpr(right))
@@ -61,11 +51,15 @@ class FormComponentUpdater(formComponent: FormComponent, index: Int, baseIds: Li
       fcv.copy(validIf = ValidIf(expandBooleanExpr(fcv.validIf.expr)))
     }
   )
+
+  val updatedWithId = updated.copy(id = ExpandUtils.addPrefix(index, formComponent.id))
+
 }
 
 object FormComponentUpdater {
   def apply(formComponent: FormComponent, index: Int, group: Group) =
     new FormComponentUpdater(formComponent, index, group.fields.map(_.id))
-  /* def apply(formComponent: FormComponent, index: Int, section: Section) =
-   *   new FormComponentUpdater(formComponent, index, section.fields.map(_.id)) */ //TODO JoVl why is this not needed? It is called in Spec
+
+  def apply(formComponent: FormComponent, index: Int, page: Page[GroupExpanded]) =
+    new FormComponentUpdater(formComponent, index, page.fields.map(_.id))
 }

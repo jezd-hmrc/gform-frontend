@@ -24,6 +24,7 @@ import cats.data.NonEmptyList
 import cats.data.Validated.{ Invalid, Valid }
 import cats.syntax.eq._
 import cats.syntax.validated._
+import shapeless.syntax.typeable._
 import play.api.i18n.Messages
 import play.api.mvc.{ Request, RequestHeader }
 import play.twirl.api.Html
@@ -40,7 +41,7 @@ import uk.gov.hmrc.gform.controllers.helpers.FormDataHelpers
 import uk.gov.hmrc.gform.fileupload.Envelope
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.lookup.{ AjaxLookup, LookupRegistry, RadioLookup }
-import uk.gov.hmrc.gform.models.{ FormModel, PageModel, Singleton }
+import uk.gov.hmrc.gform.models.{ FormModel, PageModel, Repeater, Singleton }
 import uk.gov.hmrc.gform.models.ExpandUtils._
 import uk.gov.hmrc.gform.models.javascript.JavascriptMaker
 import uk.gov.hmrc.gform.models.helpers.{ Fields, TaxPeriodHelper }
@@ -95,6 +96,78 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     retrievals: MaterialisedRetrievals,
     formLevelHeading: Boolean
   )
+
+  private def mkRecords(description: SmartString, index: Int, source: Section.AddToList): List[SmartString] =
+    (1 to index).toList.map { i =>
+      val s: List[Expr] = description.interpolations.map(expr => ExprUpdater(expr, i, source.allIds).updated)
+      description.copy(interpolations = s)
+    }
+
+  def renderAddToList(
+    repeater: Repeater[FullyExpanded],
+    formModel: FormModel[FullyExpanded],
+    maybeAccessCode: Option[AccessCode],
+    form: Form,
+    sectionNumber: SectionNumber,
+    fieldData: FormDataRecalculated,
+    formTemplate: FormTemplate,
+    errors: List[(FormComponent, FormFieldValidationResult)],
+    retrievals: MaterialisedRetrievals
+  )(implicit request: Request[_], messages: Messages, l: LangADT, sse: SmartStringEvaluator): Html = {
+
+    val listResult = errors.map { case (_, validationResult) => validationResult }
+    val pageLevelErrorHtml = generatePageLevelErrorHtml(listResult, List.empty)
+    val actionForm = uk.gov.hmrc.gform.gform.routes.FormController
+      .updateFormData(formTemplate._id, maybeAccessCode, sectionNumber)
+
+    val fc = repeater.formComponent
+
+    val descriptions =
+      repeater.repDescription.fold(List.empty[SmartString])(mkRecords(_, repeater.index, repeater.source))
+
+    println("descriptions: ")
+    descriptions.foreach(println)
+
+    val recordTable: List[(String, Int)] = descriptions.zipWithIndex.map {
+      case (description, index) => (description.value, index + 1)
+    }
+
+    val choice = fc.`type`.cast[Choice].get
+
+    val optionalHelpTextMarkDown: NonEmptyList[Html] =
+      choice.optionHelpText.fold(choice.options.map(_ => Html(""))) { helpTexts =>
+        helpTexts.map(ht => markDownParser(ht))
+      }
+
+    val (hiddenTemplateFields, fieldDataUpd) =
+      Fields.getHiddenTemplateFields(repeater, formModel, fieldData, lookupRegistry.extractors)
+    val hiddenSnippets = Fields
+      .toFormField(fieldDataUpd, hiddenTemplateFields)
+      .map(formField => html.form.snippets.hidden_field(formField))
+
+    val addAnotherQuestion = html.form.snippets.choice(
+      "radio",
+      fc,
+      choice.options,
+      Horizontal,
+      Set.empty[String],
+      None,
+      optionalHelpTextMarkDown,
+      666, // TODO JoVL what is index needed for?
+      false
+    )
+    html.form.addToList(
+      repeater,
+      formTemplate,
+      recordTable,
+      pageLevelErrorHtml,
+      frontendAppConfig,
+      actionForm,
+      retrievals.renderSaveAndComeBackLater,
+      addAnotherQuestion,
+      hiddenSnippets
+    )
+  }
 
   def renderSection(
     maybeAccessCode: Option[AccessCode],
@@ -580,7 +653,6 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
           validatedValue,
           optionalHelpTextMarkDown,
           index,
-          ei.singleton.title,
           ei.formLevelHeading
         )
       case Checkbox =>
@@ -593,7 +665,6 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
           validatedValue,
           optionalHelpTextMarkDown,
           index,
-          ei.singleton.title,
           ei.formLevelHeading
         )
       case Inline =>
@@ -937,7 +1008,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
       case Valid(_)        => Map.empty[FormComponentId, Set[String]]
     }
 
-    val fieldValues: List[FormComponent] = RepeatingComponentService.atomicFields(ei.singleton, ei.fieldData)
+    val fieldValues: List[FormComponent] = ei.singleton.allFormComponents
 
     Fields.getValidationResult(ei.fieldData, fieldValues, ei.envelope, gformErrors)(formComponent)
   }

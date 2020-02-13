@@ -18,8 +18,10 @@ package uk.gov.hmrc.gform.models
 
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
+import uk.gov.hmrc.gform.gform.{ ExprUpdater, FormComponentUpdater }
 import uk.gov.hmrc.gform.graph.RecData
-import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.Expr
+import uk.gov.hmrc.gform.sharedmodel.{ SmartString, VariadicFormData }
 import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, FormDataRecalculated, ThirdPartyData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, Exhaustive, ExpandedFormComponent, FormComponent, FormComponentId, FormTemplate, FullyExpanded, GroupExpanded, IncludeIf, Page, PageMode, Section, SectionNumber }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.Section.{ AddToList, NonRepeatingPage, RepeatingPage }
@@ -27,6 +29,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 case class FormModel[A <: PageMode](pages: List[PageModel[A]]) extends AnyVal {
   def apply(sectionNumber: SectionNumber): PageModel[A] = pages(sectionNumber.value)
+  def apply(sectionNumber: Int): PageModel[A] = pages(sectionNumber)
 
   def visible(data: FormDataRecalculated): FormModel[A] = FormModel(pages.filter(data.isVisible))
 
@@ -80,19 +83,33 @@ class FormModelBuilder(
   ): FormModel[FullyExpanded] = {
     val basicFm: FormModel[Basic] = basic()
     val groupsFm: FormModel[GroupExpanded] = expandGroups(basicFm, data)
-    val fullyExpandedFm: FormModel[FullyExpanded] = formModel(groupsFm, data)
+    val fullyExpandedFm: FormModel[FullyExpanded] = mkFormModel(groupsFm, data)
     fullyExpandedFm
   }
+
+  private def mkRepeater(s: Section.AddToList, index: Int): Repeater[Basic] = {
+    val fc = new FormComponentUpdater(s.formComponent, index, s.allIds).updatedWithId
+    //println("mkRepeater: " + (fc))
+    Repeater[Basic](s.title, s.description, s.shortName, s.includeIf, fc, index, s)
+  }
+
+  private def mkSingleton(page: Page[Basic], index: Int): Section.AddToList => Page[Basic] = source => {
+    //val fc = new FormComponentUpdater(s.formComponent, index, source.allIds).updatedWithId
+
+    page.copy(fields = page.fields.map(field => new FormComponentUpdater(field, index, source.allIds).updatedWithId))
+    //Singleton()
+    //???
+  }
+
+  private def basicAddToList(s: Section.AddToList, index: Int): List[PageModel[Basic]] =
+    s.pages.map(page => Singleton[Basic](mkSingleton(page, index)(s), s)).toList ++ List(mkRepeater(s, index))
 
   def basic(): FormModel[Basic] = FormModel[Basic] {
     formTemplate.sections
       .flatMap {
         case s: Section.NonRepeatingPage => List(Singleton[Basic](s.page, s))
         case s: Section.RepeatingPage    => List(Singleton[Basic](s.page, s))
-        case s: Section.AddToList =>
-          s.pages.map(page => Singleton[Basic](page, s)).toList ++ List(
-            Repeater[Basic](List.empty[AddToListRecord], s.title, s.shortName, s.includeIf, s))
-
+        case s: Section.AddToList        => basicAddToList(s, 1)
       }
   }
 
@@ -116,12 +133,12 @@ class FormModelBuilder(
     FormModel {
       formModel.pages.map {
         case Singleton(page, source) => Singleton(expandGroup(page, data), source)
-        case Repeater(records, title, shortName, includeIf, source) =>
-          Repeater[GroupExpanded](records, title, shortName, includeIf, source)
+        case Repeater(title, description, shortName, includeIf, formComponent, index, source) =>
+          Repeater[GroupExpanded](title, description, shortName, includeIf, formComponent, index, source)
       }
     }
 
-  def formModel(
+  def mkFormModel(
     formModel: FormModel[GroupExpanded],
     data: FormDataRecalculated
   )(
@@ -135,20 +152,29 @@ class FormModelBuilder(
               List(Singleton[FullyExpanded](page.asInstanceOf[Page[FullyExpanded]], source))
             case s: Section.RepeatingPage =>
               expandRepeatedSection(page, s, data, formModel).map(Singleton[FullyExpanded](_, source))
-            case s: Section.AddToList => List(Singleton[FullyExpanded](page.asInstanceOf[Page[FullyExpanded]], source))
+            case s: Section.AddToList =>
+              List(Singleton[FullyExpanded](page.asInstanceOf[Page[FullyExpanded]], source))
           }
 
-        case Repeater(records, title, shortName, includeIf, source) =>
-          List(Repeater[FullyExpanded](records, title, shortName, includeIf, source))
+        case Repeater(title, description, shortName, includeIf, formComponent, index, source) =>
+          val repeater =
+            Repeater[FullyExpanded](title, description, shortName, includeIf, formComponent, index, source)
+          val nextOne: Option[Seq[String]] = data.recData.data.many(formComponent.id)
+          val next = nextOne.toSeq.flatten
+          //println("nextOne           : " + (nextOne))
+          //println("next              : " + (next))
+          //println("next.contains( 0 ): " + (next.contains("0")) + ", " + index)
+          val rest = if (next.contains("0")) {
+
+            val abc: FormModel[Basic] = FormModel(basicAddToList(source, index + 1))
+            val efg: FormModel[GroupExpanded] = expandGroups(abc, data)
+            val hij: FormModel[FullyExpanded] = mkFormModel(efg, data)
+            hij.pages
+          } else {
+            Nil
+          }
+          repeater :: rest
       }
-      /* formTemplate.sections
-     *   .flatMap {
-     *     case s: Section.NonRepeatingPage => List(Singleton(s.page))
-     *     case s: Section.RepeatingPage    => ExpandRepeatedSection.generateDynamicSections(s, formTemplate, data)
-     *     case s: Section.AddToList =>
-     *       s.pages.map(Singleton.apply).toList ++ List(Repeater(List.empty[String], s.title, s.shortName, s.includeIf))
-     *
-     *   } */
     }
 
 }

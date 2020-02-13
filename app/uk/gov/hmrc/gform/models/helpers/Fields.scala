@@ -162,20 +162,20 @@ object Fields {
   }
 
   def getHiddenTemplateFields(
-    singleton: Singleton[FullyExpanded],
+    pageModel: PageModel[FullyExpanded],
     formModel: FormModel[FullyExpanded],
     data: FormDataRecalculated,
     lookupExtractors: LookupExtractors): (List[FormComponent], FormDataRecalculated) = {
-    val renderList: List[PageModel[FullyExpanded]] = formModel.pages.filterNot(_ == singleton)
+    //val renderList: List[PageModel[FullyExpanded]] = formModel.pages.filterNot(_ == pageModel)
     val sectionAtomicFields: List[FormComponent] = formModel.allFormComponents
 
     val submitted = submittedFCs(data, sectionAtomicFields)
-    val alwaysEmptyHiddenGroup = getAlwaysEmptyHiddenGroup(data, singleton, lookupExtractors)
-    val alwaysEmptyHidden = getAlwaysEmptyHidden(singleton, lookupExtractors)
-    val hiddenFUs = hiddenFileUploads(singleton)
+    val alwaysEmptyHiddenGroup = getAlwaysEmptyHiddenGroup(data, pageModel, lookupExtractors)
+    val alwaysEmptyHidden = getAlwaysEmptyHidden(pageModel, lookupExtractors)
+    val hiddenFUs = hiddenFileUploads(pageModel)
 
     val idsToRenderAsEmptyHidden = (alwaysEmptyHiddenGroup ++ alwaysEmptyHidden).map(_.id)
-    val variadicFormComponentIds = VariadicFormData.listVariadicFormComponentIds(singleton.page)
+    val variadicFormComponentIds = VariadicFormData.listVariadicFormComponentIds(pageModel)
 
     val dataUpd = idsToRenderAsEmptyHidden.foldRight(data.data) {
       case (id, acc) =>

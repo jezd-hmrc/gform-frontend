@@ -179,8 +179,8 @@ class ValidationService(
   ): Future[ValidatedType[ValidationResult]] = {
     val valid = ValidationResult.empty.valid.pure[Future]
     pageModel match {
-      case Singleton(page, source) => page.validators.map(validateUsingSectionValidators(_, data)).getOrElse(valid)
-      case Repeater(_, _, _, _, _) => valid
+      case s: Singleton[_] => s.page.validators.map(validateUsingSectionValidators(_, data)).getOrElse(valid)
+      case r: Repeater[_]  => valid
     }
   }
 

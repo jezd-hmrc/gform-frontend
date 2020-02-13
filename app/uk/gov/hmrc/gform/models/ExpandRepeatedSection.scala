@@ -22,7 +22,7 @@ import scala.util.Try
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.commons.BigDecimalUtil.toBigDecimalDefault
 import uk.gov.hmrc.gform.gform.FormComponentUpdater
-import uk.gov.hmrc.gform.graph.Evaluator
+import uk.gov.hmrc.gform.graph.{ Convertible, Evaluator }
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.sharedmodel.SmartString
 import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, FormDataRecalculated, ThirdPartyData }
@@ -59,162 +59,156 @@ object ExpandRepeatedSection {
      * thirdPartyData: ThirdPartyData,
      * envelopeId: EnvelopeId) */
 
-    idEvaluator.eval(
-      Set.empty[GraphNode],
-      FormComponentId("dummy"),
-      repeatingPage.repeats.expr,
-      data.data,
-      retrievals,
-      formTemplate,
-      thirdPartyData,
-      envelopeId
-    )
+    val count: Int = idEvaluator
+      .evalAsString(
+        data,
+        FormComponentId("dummy"),
+        repeatingPage.repeats.expr,
+        retrievals,
+        formTemplate,
+        thirdPartyData,
+        envelopeId
+      )
+      .flatMap(r => Try(r.toInt).toOption)
+      .getOrElse(1)
 
-    /* val count = getRequestedCount(repeatingPage.repeats, formModel, data)
-     *
-     * (1 to count).map { i =>
-     *   copySection(section, i, data)
-     * }.toList */
+    (1 to count).map { i =>
+      copyPage(page, i, data)
+    }.toList
 
-    List.empty[Page[FullyExpanded]]
+    //List.empty[Page[FullyExpanded]]
   }
 
   /* private def getRequestedCount2(
- *   expr: TextExpression,
- *   formModel: FormModel[GroupExpanded],
- *   data: FormDataRecalculated): Int = {
- *
- *   val repeatingGroupsFound = findRepeatingGroupsContainingField(expr, formTemplate)
- *
- *   if (repeatingGroupsFound.isEmpty) {
- *     evaluateExpression(expr.expr, formTemplate, data)
- *   } else {
- *     val groupFieldValue: FormComponent = repeatingGroupsFound.head
- *
- *     groupFieldValue match {
- *       case IsGroup(group) =>
- *         val groups: List[GroupList] = ExpandUtils.getAllFieldsInGroup(groupFieldValue, group, data)
- *         groups.map(_.componentList.size).sum
- *       case _ => 0
- *     }
- *   }
- * }
- *
- * // TODO JoVl
- * def generateDynamicSections(
- *   section: Section.RepeatingPage,
- *   formTemplate: FormTemplate,
- *   data: FormDataRecalculated): List[Singleton[FullyExpanded]] = {
- *
- *   val count = getRequestedCount(section.repeats, formTemplate, data)
- *
- *   (1 to count).map { i =>
- *     copySection(section, i, data)
- *   }.toList
- *
- * }
- *
- * private def copySection(
- *   section: Section.RepeatingPage,
- *   index: Int,
- *   data: FormDataRecalculated): Singleton[FullyExpanded] = {
- *   def copyField(field: FormComponent): FormComponent = {
- *     val tpe = field.`type` match {
- *       case rc: RevealingChoice =>
- *         val optionsUpd = rc.options.map(rce => rce.copy(revealingFields = rce.revealingFields.map(copyField)))
- *         rc.copy(options = optionsUpd)
- *       case grp @ Group(fields, _, _, _, _, _) =>
- *         grp.copy(fields = fields.map(copyField))
- *       case t => t
- *     }
- *     FormComponentUpdater(
- *       field.copy(
- *         id = FormComponentId(s"${index}_${field.id.value}"),
- *         `type` = tpe
- *       ),
- *       index,
- *       section
- *     ).updated
- *   }
- *
- *   Singleton(
- *     section.page.copy(
- *       title = buildText(section.title, index, data),
- *       shortName = optBuildText(section.shortName, index, data),
- *       fields = section.fields.map(copyField)
- *     )
- *   )
- *
- * }
- *
- * private def optBuildText(maybeLs: Option[SmartString], index: Int, data: FormDataRecalculated): Option[SmartString] =
- *   maybeLs.map(ls => buildText(ls, index, data))
- *
- * private def buildText(ls: SmartString, index: Int, data: FormDataRecalculated): SmartString =
- *   ls.replace("$n", index.toString)
- *
- * private def sumFunctionality(field: FormCtx, formTemplate: FormTemplate, data: FormDataRecalculated): BigDecimal = {
- *   val repeatFormComponentIds =
- *     RepeatingComponentService.getRepeatFormComponentIds(formTemplate.expandFormTemplate(data.data).allFormComponents)
- *   val fcIds: List[FormComponentId] = repeatFormComponentIds.op(FormComponentId(field.value))
- *   fcIds.map(id => data.data.one(id).fold(0: BigDecimal)(toBigDecimalDefault)).sum
- * }
- *
- * //This Evaluation is for the repeating sections, this will not become values.
- * private def evaluateExpression(expr: Expr, formTemplate: FormTemplate, data: FormDataRecalculated): Int = {
- *   def eval(expr: Expr): Int = expr match {
- *     case Add(expr1, expr2)         => eval(expr1) + eval(expr2)
- *     case Multiply(expr1, expr2)    => eval(expr1) * eval(expr2)
- *     case Subtraction(expr1, expr2) => eval(expr1) - eval(expr2)
- *     case Sum(ctx @ FormCtx(_))     => sumFunctionality(ctx, formTemplate, data).toInt
- *     case formExpr @ FormCtx(_)     => getFormFieldIntValue(TextExpression(formExpr), data)
- *     case Constant(value)           => Try(value.toInt).toOption.getOrElse(0)
- *     // case AuthCtx(value: AuthInfo) =>
- *     // case EeittCtx(value: Eeitt) =>
- *     case _ => 0
- *   }
- *   eval(expr)
- * }
- *
- * /\**
- *   * This method decide if section is expanded based on repeated group or simple numeric expression
- *  **\/
- * private def getRequestedCount(expr: TextExpression, formTemplate: FormTemplate, data: FormDataRecalculated): Int = {
- *
- *   val repeatingGroupsFound = findRepeatingGroupsContainingField(expr, formTemplate)
- *
- *   if (repeatingGroupsFound.isEmpty) {
- *     evaluateExpression(expr.expr, formTemplate, data)
- *   } else {
- *     val groupFieldValue: FormComponent = repeatingGroupsFound.head
- *
- *     groupFieldValue match {
- *       case IsGroup(group) =>
- *         val groups: List[GroupList] = ExpandUtils.getAllFieldsInGroup(groupFieldValue, group, data)
- *         groups.map(_.componentList.size).sum
- *       case _ => 0
- *     }
- *   }
- * }
- *
- * private def getFormFieldIntValue(expr: TextExpression, data: FormDataRecalculated): Int = {
- *   val id = extractFieldId(expr)
- *
- *   data.data
- *     .one(FormComponentId(id))
- *     .flatMap { v =>
- *       Try(v.toInt).toOption
- *     }
- *     .getOrElse(0)
- * }
- *
- * private def extractFieldId(expr: TextExpression) =
- *   expr.expr match {
- *     case FormCtx(fieldId) => fieldId
- *     case _                => ""
- *   }
- *
- * private def findRepeatingGroupsContainingField(
+   *   expr: TextExpression,
+   *   formModel: FormModel[GroupExpanded],
+   *   data: FormDataRecalculated): Int = {
+   *
+   *   val repeatingGroupsFound = findRepeatingGroupsContainingField(expr, formTemplate)
+   *
+   *   if (repeatingGroupsFound.isEmpty) {
+   *     evaluateExpression(expr.expr, formTemplate, data)
+   *   } else {
+   *     val groupFieldValue: FormComponent = repeatingGroupsFound.head
+   *
+   *     groupFieldValue match {
+   *       case IsGroup(group) =>
+   *         val groups: List[GroupList] = ExpandUtils.getAllFieldsInGroup(groupFieldValue, group, data)
+   *         groups.map(_.componentList.size).sum
+   *       case _ => 0
+   *     }
+   *   }
+   * } */
+
+  /* def generateDynamicSections(
+   *   section: Section.RepeatingPage,
+   *   formTemplate: FormTemplate,
+   *   data: FormDataRecalculated): List[Singleton[FullyExpanded]] = {
+   *
+   *   val count = getRequestedCount(section.repeats, formTemplate, data)
+   *
+   *   (1 to count).map { i =>
+   *     copySection(section, i, data)
+   *   }.toList
+   *
+   * } */
+
+  private def copyPage(page: Page[GroupExpanded], index: Int, data: FormDataRecalculated): Page[FullyExpanded] = {
+    def copyField(field: FormComponent): FormComponent = {
+      val tpe = field.`type` match {
+        case rc: RevealingChoice =>
+          val optionsUpd = rc.options.map(rce => rce.copy(revealingFields = rce.revealingFields.map(copyField)))
+          rc.copy(options = optionsUpd)
+        case grp @ Group(fields, _, _, _, _, _) =>
+          grp.copy(fields = fields.map(copyField))
+        case t => t
+      }
+      FormComponentUpdater(
+        field.copy(
+          id = FormComponentId(s"${index}_${field.id.value}"),
+          `type` = tpe
+        ),
+        index,
+        page
+      ).updated
+    }
+
+    page.copy(
+      title = buildText(page.title, index, data),
+      shortName = optBuildText(page.shortName, index, data),
+      fields = page.fields.map(copyField)
+    )
+
+  }
+
+  private def optBuildText(maybeLs: Option[SmartString], index: Int, data: FormDataRecalculated): Option[SmartString] =
+    maybeLs.map(ls => buildText(ls, index, data))
+
+  private def buildText(ls: SmartString, index: Int, data: FormDataRecalculated): SmartString =
+    ls.replace("$n", index.toString)
+
+  /* private def sumFunctionality(field: FormCtx, formTemplate: FormTemplate, data: FormDataRecalculated): BigDecimal = {
+   *   val repeatFormComponentIds =
+   *     RepeatingComponentService.getRepeatFormComponentIds(formTemplate.expandFormTemplate(data.data).allFormComponents)
+   *   val fcIds: List[FormComponentId] = repeatFormComponentIds.op(FormComponentId(field.value))
+   *   fcIds.map(id => data.data.one(id).fold(0: BigDecimal)(toBigDecimalDefault)).sum
+   * } */
+
+  /* //This Evaluation is for the repeating sections, this will not become values.
+   *   private def evaluateExpression(expr: Expr, formTemplate: FormTemplate, data: FormDataRecalculated): Int = {
+   *     def eval(expr: Expr): Int = expr match {
+   *       case Add(expr1, expr2)         => eval(expr1) + eval(expr2)
+   *       case Multiply(expr1, expr2)    => eval(expr1) * eval(expr2)
+   *       case Subtraction(expr1, expr2) => eval(expr1) - eval(expr2)
+   *       case Sum(ctx @ FormCtx(_))     => sumFunctionality(ctx, formTemplate, data).toInt
+   *       case formExpr @ FormCtx(_)     => getFormFieldIntValue(TextExpression(formExpr), data)
+   *       case Constant(value)           => Try(value.toInt).toOption.getOrElse(0)
+   *       // case AuthCtx(value: AuthInfo) =>
+   *       // case EeittCtx(value: Eeitt) =>
+   *       case _ => 0
+   *     }
+   *     eval(expr)
+   *   } */
+
+  /**
+    * This method decide if section is expanded based on repeated group or simple numeric expression
+ **/
+  /* private def getRequestedCount(expr: TextExpression, formTemplate: FormTemplate, data: FormDataRecalculated): Int = {
+   *
+   *   val repeatingGroupsFound = findRepeatingGroupsContainingField(expr, formTemplate)
+   *
+   *   if (repeatingGroupsFound.isEmpty) {
+   *     evaluateExpression(expr.expr, formTemplate, data)
+   *   } else {
+   *     val groupFieldValue: FormComponent = repeatingGroupsFound.head
+   *
+   *     groupFieldValue match {
+   *       case IsGroup(group) =>
+   *         val groups: List[GroupList] = ExpandUtils.getAllFieldsInGroup(groupFieldValue, group, data)
+   *         groups.map(_.componentList.size).sum
+   *       case _ => 0
+   *     }
+   *   }
+   * } */
+
+  /* private def getFormFieldIntValue(expr: TextExpression, data: FormDataRecalculated): Int = {
+   *   val id = extractFieldId(expr)
+   *
+   *   data.data
+   *     .one(FormComponentId(id))
+   *     .flatMap { v =>
+   *       Try(v.toInt).toOption
+   *     }
+   *     .getOrElse(0)
+   * } */
+
+  /* private def extractFieldId(expr: TextExpression) =
+   *   expr.expr match {
+   *     case FormCtx(fieldId) => fieldId
+   *     case _                => ""
+   *   } */
+
+  /* private def findRepeatingGroupsContainingField(
  *   expr: TextExpression,
  *   formTemplate: FormTemplate): Set[FormComponent] = {
  *
@@ -229,7 +223,7 @@ object ExpandRepeatedSection {
  *       }
  *     }.toSet
  *
- *   //formTemplate.sections.flatMap(section => findRepeatingGroups(None, section.fields)).toSet // TODO JoVl
+ *   //formTemplate.sections.flatMap(section => findRepeatingGroups(None, section.fields)).toSet
  *   Set.empty
  * } */
 }

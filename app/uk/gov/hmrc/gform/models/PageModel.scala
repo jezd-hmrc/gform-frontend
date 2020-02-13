@@ -22,34 +22,20 @@ import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponent, FullyExpanded, IncludeIf, Page, PageMode, Section }
 
 sealed trait PageModel[A <: PageMode] extends Product with Serializable {
-  def title: SmartString = this match {
-    case Singleton(page, _)          => page.title
-    case Repeater(_, title, _, _, _) => title
-  }
-  def shortName: Option[SmartString] = this match {
-    case Singleton(page, _)              => page.shortName
-    case Repeater(_, _, shortName, _, _) => shortName
-  }
+  def title: SmartString = fold(_.page.title)(_.repTitle)
 
-  def isTerminationPage = this match {
-    case Singleton(page, _)      => page.isTerminationPage
-    case Repeater(_, _, _, _, _) => false
-  }
+  def shortName: Option[SmartString] = fold(_.page.shortName)(_.repShortName)
 
-  def expand(formDataRecalculated: FormDataRecalculated): PageModel[FullyExpanded] = ???
-  //def expandSectionRc(formDataRecalculated: FormDataRecalculated): ExpandedSection = ???
+  def isTerminationPage = fold(_.page.isTerminationPage)(_ => false)
 
-  def jsFormComponentModels: List[JsFormComponentModel] = this match {
-    case Singleton(page, _)      => page.fields.flatMap(_.jsFormComponentModels)
-    case Repeater(_, _, _, _, _) => Nil
-  }
+  def jsFormComponentModels: List[JsFormComponentModel] = fold(_.page.fields.flatMap(_.jsFormComponentModels))(_ => Nil)
 
   def fold[B](f: Singleton[A] => B)(g: Repeater[A] => B): B = this match {
     case s: Singleton[A] => f(s)
     case r: Repeater[A]  => g(r)
   }
 
-  def allFormComponents: List[FormComponent] = ???
+  def allFormComponents: List[FormComponent] = fold(_.page.fields)(r => r.formComponent :: Nil)
 
 }
 
@@ -57,9 +43,11 @@ case class AddToListRecord(value: String) extends AnyVal
 
 case class Singleton[A <: PageMode](page: Page[A], source: Section) extends PageModel[A]
 case class Repeater[A <: PageMode](
-  records: List[AddToListRecord],
   repTitle: SmartString,
+  repDescription: Option[SmartString],
   repShortName: Option[SmartString],
   includeIf: Option[IncludeIf],
+  formComponent: FormComponent,
+  index: Int,
   source: Section.AddToList
 ) extends PageModel[A]

@@ -36,9 +36,6 @@ case class Page[A <: PageMode](
   continueLabel: Option[SmartString],
   continueIf: Option[ContinueIf]
 ) {
-  lazy val expandedFormComponents: List[FormComponent] = fields.flatMap(_.expandedFormComponents)
-
-  val expandFieldsFull: List[ExpandedFormComponent] = fields.map(_.expandFormComponentFull)
 
   val isTerminationPage: Boolean = continueIf.contains(Stop)
 

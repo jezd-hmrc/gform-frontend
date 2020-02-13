@@ -28,39 +28,39 @@ import uk.gov.hmrc.gform.sharedmodel.formtemplate.JsonUtils.nelFormat
 
 sealed trait Section extends Product with Serializable {
   def getTitle: SmartString = this match {
-    case Section.NonRepeatingPage(page)             => page.title
-    case Section.RepeatingPage(page, _)             => page.title
-    case Section.AddToList(_, title, _, _, _, _, _) => title
+    case s: Section.NonRepeatingPage => s.page.title
+    case s: Section.RepeatingPage    => s.page.title
+    case s: Section.AddToList        => s.title
   }
 
   def validators: Option[Validator] = this match {
-    case Section.NonRepeatingPage(page)         => page.validators
-    case Section.RepeatingPage(page, _)         => page.validators
-    case Section.AddToList(_, _, _, _, _, _, _) => None
+    case s: Section.NonRepeatingPage => s.page.validators
+    case s: Section.RepeatingPage    => s.page.validators
+    case s: Section.AddToList        => None
   }
 
   def progressIndicator: Option[SmartString] = this match {
-    case Section.NonRepeatingPage(page)         => page.progressIndicator
-    case Section.RepeatingPage(page, _)         => page.progressIndicator
-    case Section.AddToList(_, _, _, _, _, _, _) => None
+    case s: Section.NonRepeatingPage => s.page.progressIndicator
+    case s: Section.RepeatingPage    => s.page.progressIndicator
+    case s: Section.AddToList        => None
   }
 
   def continueLabel: Option[SmartString] = this match {
-    case Section.NonRepeatingPage(page)         => page.continueLabel
-    case Section.RepeatingPage(page, _)         => page.continueLabel
-    case Section.AddToList(_, _, _, _, _, _, _) => None
+    case s: Section.NonRepeatingPage => s.page.continueLabel
+    case s: Section.RepeatingPage    => s.page.continueLabel
+    case s: Section.AddToList        => None
   }
 
   def isRepeating: Boolean = this match {
-    case Section.NonRepeatingPage(_)            => false
-    case Section.RepeatingPage(_, _)            => true
-    case Section.AddToList(_, _, _, _, _, _, _) => false
+    case s: Section.NonRepeatingPage => false
+    case s: Section.RepeatingPage    => true
+    case s: Section.AddToList        => false
   }
 
   def isTerminationPage: Boolean = this match {
-    case Section.NonRepeatingPage(page)         => page.continueIf.contains(Stop)
-    case Section.RepeatingPage(page, _)         => page.continueIf.contains(Stop)
-    case Section.AddToList(_, _, _, _, _, _, _) => true
+    case s: Section.NonRepeatingPage => s.page.continueIf.contains(Stop)
+    case s: Section.RepeatingPage    => s.page.continueIf.contains(Stop)
+    case s: Section.AddToList        => false
   }
 }
 
@@ -76,8 +76,11 @@ object Section {
     shortName: Option[SmartString],
     includeIf: Option[IncludeIf],
     repeatsMax: Option[TextExpression],
-    pages: NonEmptyList[Page[Basic]]
-  ) extends Section
+    pages: NonEmptyList[Page[Basic]],
+    formComponent: FormComponent
+  ) extends Section {
+    val allIds: List[FormComponentId] = formComponent.id :: pages.toList.flatMap(_.fields.map(_.id))
+  }
 
   implicit val format: OFormat[Section] = derived.oformat[Section]
 }

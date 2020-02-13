@@ -21,6 +21,8 @@ import cats.instances.set._
 import cats.syntax.foldable._
 import cats.{ Monoid, Show }
 import cats.syntax.show._
+import uk.gov.hmrc.gform.models.PageModel
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.PageMode
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.Section.{ AddToList, NonRepeatingPage, RepeatingPage }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.destinations.Destinations.DestinationList
@@ -158,23 +160,26 @@ object VariadicFormData {
       }
     )
 
-  def listVariadicFormComponentIds(template: FormTemplate): Set[FormComponentId] = ??? /* { // TODO JoVl
-   *   val acknowledgementSectionFields = template.destinations match {
-   *     case destinationList: DestinationList =>
-   *       listVariadicFormComponentIds(destinationList.acknowledgementSection.fields)
-   *     case _ => Set.empty
-   *   }
-   *
-   *   acknowledgementSectionFields ++ listVariadicFormComponentIds(template.declarationSection.fields) ++
-   *     template.sections.foldMap {
-   *       case s: NonRepeatingPage => listVariadicFormComponentIds(s.page)
-   *       case s: RepeatingPage    => listVariadicFormComponentIds(s.page)
-   *       case s: AddToList        => s.pages.foldMap(listVariadicFormComponentIds)
-   *     }
-   * } */
+  def listVariadicFormComponentIds(template: FormTemplate): Set[FormComponentId] = {
+    val acknowledgementSectionFields = template.destinations match {
+      case destinationList: DestinationList =>
+        listVariadicFormComponentIds(destinationList.acknowledgementSection.fields)
+      case _ => Set.empty
+    }
 
-  def listVariadicFormComponentIds(page: Page[FullyExpanded]): Set[FormComponentId] =
+    acknowledgementSectionFields ++ listVariadicFormComponentIds(template.declarationSection.fields) ++
+      template.sections.foldMap {
+        case s: NonRepeatingPage => listVariadicFormComponentIds(s.page)
+        case s: RepeatingPage    => listVariadicFormComponentIds(s.page)
+        case s: AddToList        => s.pages.foldMap(listVariadicFormComponentIds) + s.formComponent.id
+      }
+  }
+
+  def listVariadicFormComponentIds[A <: PageMode](page: Page[A]): Set[FormComponentId] =
     page.fields.flatMap(listVariadicFormComponentIds).toSet
+
+  def listVariadicFormComponentIds[A <: PageMode](pageModel: PageModel[A]): Set[FormComponentId] =
+    pageModel.allFormComponents.flatMap(listVariadicFormComponentIds).toSet
 
   def listVariadicFormComponentIds(component: FormComponent): Set[FormComponentId] =
     component.`type` match {

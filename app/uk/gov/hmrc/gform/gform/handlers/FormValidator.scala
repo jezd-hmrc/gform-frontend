@@ -118,10 +118,6 @@ class FormValidator(implicit ec: ExecutionContext) {
     val data = processData.data
 
     val availableSectionNumbers: List[SectionNumber] = Origin(formModel, data).availableSectionNumbers
-    println("formModel.pages: ")
-    formModel.pages.foreach(println)
-    println("data: " + data)
-    println("availableSectionNumbers: " + (availableSectionNumbers))
     availableSectionNumbers.foldLeft(Future.successful(None: Option[SectionNumber])) {
       case (accF, currentSn) =>
         accF.flatMap {

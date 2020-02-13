@@ -61,7 +61,11 @@ object FormTemplateBuilder {
     )
 
   def mkRepeatingPageSection(formComponents: List[FormComponent]): Section.RepeatingPage =
-    Section.RepeatingPage(page(formComponents), TextExpression(Constant("1")))
+    mkRepeatingPageSection(formComponents, Constant("1"))
+
+  def mkRepeatingPageSection(formComponents: List[FormComponent], expr: Expr): Section.RepeatingPage =
+    Section.RepeatingPage(page(formComponents), TextExpression(expr))
+
   def mkSection(formComponents: FormComponent*): Section.NonRepeatingPage = mkSection(formComponents.toList)
   def mkSection(formComponents: List[FormComponent]) = Section.NonRepeatingPage(page(formComponents))
 

@@ -390,3 +390,26 @@ select:focus {
 }
 
 
+dl.hmrc-add-to-a-list {
+    width: 100%;
+    display: table;
+}
+
+.hmrc-add-to-a-list__contents {
+    display: table-row;
+}
+
+dt.hmrc-add-to-a-list__identifier {
+    font-weight: normal;
+    display: table-cell;
+}
+
+dd.hmrc-add-to-a-list__change {
+    display: table-cell;
+    text-align: right;
+}
+
+dd.hmrc-add-to-a-list__remove {
+    display: table-cell;
+    text-align: right;
+}

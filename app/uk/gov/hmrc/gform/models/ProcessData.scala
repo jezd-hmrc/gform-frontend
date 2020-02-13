@@ -44,19 +44,20 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
   def updateSectionVisits(
     formModel: FormModel[FullyExpanded],
     mongoFormModel: FormModel[FullyExpanded],
-    visitsIndex: VisitIndex): Set[Int] = Set.empty[Int] // TODO JoVl
-  /* visitsIndex.visitsIndex
-   *   .map { index =>
-   *     Try(mongoSections(index)).toOption.fold(-1) { section =>
-   *       section.fields.headOption.fold(-1) { mongoHead =>
-   *         val firstComponentId = mongoHead.id
-   *         sections.indexWhere { s =>
-   *           s.fields.headOption.fold(false)(_.id === firstComponentId)
-   *         }
-   *       }
-   *     }
-   *   }
-   *   .filterNot(_ === -1) */
+    visitsIndex: VisitIndex
+  ): Set[Int] =
+    visitsIndex.visitsIndex
+      .map { index =>
+        Try(mongoFormModel(index)).toOption.fold(-1) { page =>
+          page.allFormComponents.headOption.fold(-1) { mongoHead =>
+            val firstComponentId = mongoHead.id
+            formModel.pages.indexWhere { pageModel =>
+              pageModel.allFormComponents.headOption.fold(false)(_.id === firstComponentId)
+            }
+          }
+        }
+      }
+      .filterNot(_ === -1)
 
   def hmrcTaxPeriodWithId(recData: RecData): Option[NonEmptyList[HmrcTaxPeriodWithEvaluatedId]] =
     recData.recalculatedTaxPeriod.map {

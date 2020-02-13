@@ -15,6 +15,9 @@ linkText.addRepeatingGroup=Add another
 linkText.signOut=Sign out
 linkText.signBackIn=Sign back in
 
+addToList.change=Change
+addToList.remove=Remove
+
 button.continue=Continue
 button.saveAndContinue=Save and continue
 button.acceptAndSubmit=Accept and submit

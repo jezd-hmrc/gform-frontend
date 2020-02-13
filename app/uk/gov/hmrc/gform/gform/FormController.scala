@@ -96,7 +96,7 @@ class FormController(
           }
           .map { handlerResult =>
             val result = handlerResult.formModel(sectionNumber) match {
-              case singleton @ Singleton(_, _) =>
+              case singleton: Singleton[_] =>
                 renderer.renderSection(
                   maybeAccessCode,
                   cache.form,
@@ -114,7 +114,18 @@ class FormController(
                   cache.retrievals,
                   cache.form.thirdPartyData.obligations
                 )
-              case Repeater(_, _, _, _, _) => ???
+              case repeater: Repeater[_] =>
+                renderer.renderAddToList(
+                  repeater,
+                  handlerResult.formModel,
+                  maybeAccessCode,
+                  cache.form,
+                  sectionNumber,
+                  handlerResult.data,
+                  cache.formTemplate,
+                  handlerResult.result,
+                  cache.retrievals
+                )
             }
             Ok(result)
           }

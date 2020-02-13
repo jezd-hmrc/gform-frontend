@@ -176,35 +176,34 @@ object RepeatingComponentService {
    *       }
    *     }.toSet
    *
-   *   //formTemplate.sections.flatMap(section => findRepeatingGroups(None, section.fields)).toSet // TODO JoVl
+   *   //formTemplate.sections.flatMap(section => findRepeatingGroups(None, section.fields)).toSet
    *   Set.empty
    * } */
 
   /* def atomicFields(section: BaseSection, data: VariadicFormData): List[FormComponent] = {
-   *   def loop(fields: List[FormComponent]): List[FormComponent] =
-   *     fields
-   *       .flatMap { fv =>
-   *         fv.`type` match {
-   *           case groupField @ Group(_, _, _, _, _, _) =>
-   *             section match {
-   *               case DeclarationSection(_, _, _, _) => loop(groupField.fields)
-   *               case _                              => List.empty
-   *             }
-   *           case _ => List(fv)
-   *         }
-   *       }
-   *
-   *   section match {
-   *     case s: Section => s.expandSection(data).expandedFormComponents.flatMap(_.formComponents)
-   *     case _          => loop(section.fields)
-   *   }
-   * } */
-
-  def atomicFields(singleton: Singleton[FullyExpanded], data: FormDataRecalculated): List[FormComponent] =
-    ??? // TODO JoVl
-  //singleton.expand(data).expandedFormComponents.flatMap(_.formComponents)
-
-  /* def atomicFieldsFull(section: Section): List[FormComponent] =
+ *   def loop(fields: List[FormComponent]): List[FormComponent] =
+ *     fields
+ *       .flatMap { fv =>
+ *         fv.`type` match {
+ *           case groupField @ Group(_, _, _, _, _, _) =>
+ *             section match {
+ *               case DeclarationSection(_, _, _, _) => loop(groupField.fields)
+ *               case _                              => List.empty
+ *             }
+ *           case _ => List(fv)
+ *         }
+ *       }
+ *
+ *   section match {
+ *     case s: Section => s.expandSection(data).expandedFormComponents.flatMap(_.formComponents)
+ *     case _          => loop(section.fields)
+ *   }
+ * }
+ *
+ * def atomicFields(singleton: Singleton[FullyExpanded], data: FormDataRecalculated): List[FormComponent] =
+ *   singleton.expand(data).expandedFormComponents.flatMap(_.formComponents)
+ *
+ * def atomicFieldsFull(section: Section): List[FormComponent] =
  *   section.expandSectionFull.flatMap(_.expandedFormComponents.flatMap(_.formComponents)) */
 
 }

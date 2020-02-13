@@ -39,7 +39,7 @@ object ExpandUtils {
           case IsMultiField(_) => false
           case fc              => !data.data.contains(fc.id)
         }
-      case Repeater(_, _, _, _, _) => Nil
+      case Repeater(_, _, _, _, _, _, _) => Nil
     }
 
   def submittedFCs(data: FormDataRecalculated, formComponents: List[FormComponent]): List[FormComponent] = {
@@ -53,19 +53,19 @@ object ExpandUtils {
 
   def getAlwaysEmptyHiddenGroup(
     data: FormDataRecalculated,
-    singleton: Singleton[FullyExpanded],
+    pageModel: PageModel[FullyExpanded],
     lookupExtractors: LookupExtractors): List[FormComponent] = {
-    val aeh = alwaysEmptyHidden(data, singleton) _
+    val aeh = alwaysEmptyHidden(data, pageModel) _
     aeh({ case IsInformationMessage(info)               => info }) ++ // It is safe to include hidden fields for info messages, since they are not submissible
       aeh({ case IsChoice(choice)                       => choice }) ++
       aeh({ case lookupExtractors.IsRadioLookup(lookup) => lookup }) ++
       aeh({ case IsFileUpload()                         => () })
   }
 
-  private def alwaysEmptyHidden[A](data: FormDataRecalculated, singleton: Singleton[FullyExpanded])(
+  private def alwaysEmptyHidden[A](data: FormDataRecalculated, pageModel: PageModel[FullyExpanded])(
     pf: PartialFunction[FormComponent, A]): List[FormComponent] = {
 
-    val (groupFcs, groups): (List[FormComponent], List[Group]) = singleton.page.fields.collect {
+    val (groupFcs, groups): (List[FormComponent], List[Group]) = pageModel.allFormComponents.collect {
       case fc @ IsGroup(group) => (fc, group)
     } unzip
 
@@ -80,16 +80,16 @@ object ExpandUtils {
   }
 
   def getAlwaysEmptyHidden(
-    singleton: Singleton[FullyExpanded],
+    pageModel: PageModel[FullyExpanded],
     lookupExtractors: LookupExtractors): List[FormComponent] =
-    singleton.page.fields.filter {
+    pageModel.allFormComponents.filter {
       case IsChoice(_)                       => true
       case lookupExtractors.IsRadioLookup(_) => true
       case _                                 => false
     }
 
-  def hiddenFileUploads(singleton: Singleton[FullyExpanded]): List[FormComponent] =
-    singleton.page.fields.filter {
+  def hiddenFileUploads(pageModel: PageModel[FullyExpanded]): List[FormComponent] =
+    pageModel.allFormComponents.filter {
       case IsFileUpload() => true
       case _              => false
     }
@@ -102,7 +102,7 @@ object ExpandUtils {
   private def hasPrefix(n: Int, fcId: FormComponentId): Boolean =
     fcId.value.startsWith(n.toString + "_")
 
-  private def addPrefix(n: Int, targetFcId: FormComponentId): FormComponentId =
+  def addPrefix(n: Int, targetFcId: FormComponentId): FormComponentId =
     targetFcId.value match {
       case NumericPrefix(_) => targetFcId
       case _                => FormComponentId(n + "_" + targetFcId.value)

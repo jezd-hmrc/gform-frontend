@@ -29,14 +29,15 @@ object JavascriptMaker {
     formTemplate: FormTemplate): String = {
     val pageModel = formModel(sectionNumber)
     val jsFormComponentModels = pageModel.jsFormComponentModels
-    val allAtomicFields = FormModel.expandFull(formTemplate).allFormComponents //flatMap(RepeatingComponentService.atomicFieldsFull)
+    //val allAtomicFields = dynamicSections.flatMap(RepeatingComponentService.atomicFieldsFull)
+    val allAtomicFields = formModel.allFormComponents // TODO JoVL this used to be full expansion, why?
 
-    createJavascript(pageModel, jsFormComponentModels, allAtomicFields, mkDependencies(formTemplate))
+    createJavascript(pageModel, jsFormComponentModels, allAtomicFields, mkDependencies(formModel))
 
   }
 
-  private def mkDependencies(formTemplate: FormTemplate): Dependencies = {
-    val graph = DependencyGraph.toGraphFull(formTemplate)
+  private def mkDependencies(formModel: FormModel[FullyExpanded]): Dependencies = {
+    val graph = DependencyGraph.toGraph(formModel)
 
     val graphTopologicalOrder: Either[graph.NodeT, Traversable[(Int, List[GraphNode])]] =
       DependencyGraph.constructDependencyGraph(graph)

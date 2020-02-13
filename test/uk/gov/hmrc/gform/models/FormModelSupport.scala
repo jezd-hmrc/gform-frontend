@@ -43,7 +43,6 @@ trait FormModelSupport {
     getSingleton(section, FormDataRecalculated.empty)
 
   def getSingleton(section: Section.NonRepeatingPage, data: FormDataRecalculated): Singleton[FullyExpanded] = {
-    //val formTemplate: FormTemplate = mkFormTemplate(section)
     val formModel: FormModel[FullyExpanded] = mkFormModel(List(section), data)
     val singletons: Option[Singleton[FullyExpanded]] = formModel.pages.collectFirst {
       case s: Singleton[_] => s

@@ -1,0 +1,113 @@
+@*
+ * Copyright 2020 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *@
+
+@import uk.gov.hmrc.gform.sharedmodel.form._
+@import uk.gov.hmrc.gform.sharedmodel.formtemplate._
+@import uk.gov.hmrc.gform.models._
+@import uk.gov.hmrc.gform.validation.{FormFieldValidationResult, ValidationUtil}
+@import views.html.helper.CSRF
+@import uk.gov.hmrc.gform.config.FrontendAppConfig
+@import uk.gov.hmrc.gform.gform.HasErrors
+@import uk.gov.hmrc.gform.views.html.specimen
+
+@(
+  repeater: Repeater[FullyExpanded],
+  formTemplate: FormTemplate,
+  recordTable: List[(String, Int)],
+  pageLevelError: HasErrors,
+  frontendAppConfig: FrontendAppConfig,
+  formAction: Call,
+  renderComeBackLater: Boolean,
+  snippets: Html,
+  hiddenFieldsSnippets: List[Html]
+)(
+    implicit
+    request: Request[_], //required by CSRF.formField
+    messages: Messages,
+    l:LangADT,
+    viewHelpers: ViewHelpersAlgebra,
+    sse: SmartStringEvaluator
+)
+
+@heading = @{repeater.title.value}
+
+@buttonLabel = @{
+    messages("button.saveAndContinue")
+}
+
+@backLink = {
+  <a href="#" class="link-back js-visible" id="backButton">@messages("linkText.back")</a>
+}
+
+    @uk.gov.hmrc.gform.views.html.main_template(
+      title = heading,
+      serviceName = formTemplate.formName.value,
+      containsErrors = pageLevelError.hasErrors,
+      developmentPhase = formTemplate.developmentPhase.getOrElse(ResearchBanner),
+      frontendAppConfig = frontendAppConfig,
+      authConfig = Some(formTemplate.authConfig),
+      webChat = formTemplate.webChat,
+      formCategory = formTemplate.formCategory,
+      languages = formTemplate.languages,
+      templateId = formTemplate._id
+    ) {
+
+    @backLink
+
+    @pageLevelError.render
+
+    <h1 class="h1-heading form-title">
+      @heading
+    </h1>
+
+    @for(record <- recordTable) {
+       <dl class="hmrc-add-to-a-list">
+         <div class="hmrc-add-to-a-list__contents">
+           <dt class="hmrc-add-to-a-list__identifier">@record._1</dt>
+           <dd class="hmrc-add-to-a-list__change"><a href="#" class="js-visible">@messages("addToList.change")</a></dd>
+           <dd class="hmrc-add-to-a-list__remove"><a href="#" class="js-visible">@messages("addToList.remove")</a></dd>
+	 </div>
+       </dl>
+    }
+
+    <form action="@formAction.url" method="POST" class="js-form" autocomplete="on" novalidate="novalidate" id="gf-form">
+    @{CSRF.formField}
+
+    @{snippets}
+
+    @{hiddenFieldsSnippets}
+
+    <input type="hidden" id="gform-action" name="save" value="Continue" />
+
+    <div class="form-group">
+      <button type="submit" class="button" value="Continue">@{buttonLabel}</button>
+    </div>
+
+    <div class="js-visible">
+      @if(renderComeBackLater) {
+        <div class="form-group">
+           <a href="#" id="saveComeBackLater">@messages("linkText.saveAndComeBackLater")</a>
+        </div>
+      }
+    </div>
+    </form>
+
+  @*  @if(formTemplate.isSpecimen) {
+       @specimen.navigation(formTemplate, page)
+    } *@
+
+
+}
