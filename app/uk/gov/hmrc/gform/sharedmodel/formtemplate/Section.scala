@@ -19,6 +19,7 @@ package uk.gov.hmrc.gform.sharedmodel.formtemplate
 import cats.data.NonEmptyList
 import cats.instances.list._
 import cats.syntax.foldable._
+import cats.syntax.eq._
 import julienrf.json.derived
 import play.api.libs.json._
 import uk.gov.hmrc.gform.models.javascript.JsFormComponentModel
@@ -62,6 +63,16 @@ sealed trait Section extends Product with Serializable {
     case s: Section.RepeatingPage    => s.page.continueIf.contains(Stop)
     case s: Section.AddToList        => false
   }
+
+  def byAddToListId(addToListId: AddToListId): Boolean = fold(_ => false)(_ => false)(_.id === addToListId)
+
+  def fold[B](f: Section.NonRepeatingPage => B)(g: Section.RepeatingPage => B)(h: Section.AddToList => B): B =
+    this match {
+      case n: Section.NonRepeatingPage => f(n)
+      case r: Section.RepeatingPage    => g(r)
+      case a: Section.AddToList        => h(a)
+    }
+
 }
 
 object Section {

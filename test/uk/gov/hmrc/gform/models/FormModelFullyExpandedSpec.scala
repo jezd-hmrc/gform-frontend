@@ -26,7 +26,7 @@ import uk.gov.hmrc.gform.sharedmodel.VariadicValue.One
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, FormComponent, FormComponentId, GroupExpanded, Page, Section, Value }
 
-class FormModelFullyExpandedSpec extends FlatSpec with Matchers with FormModelSupport {
+class FormModelFullyExpandedSpec extends FlatSpec with Matchers with RecalculatedFormDataSupport with FormModelSupport {
   "FormModel.expand" should "expand groups and repeatedSections in Section.NonRepeatingPage" in {
     val fcA = mkFormComponent("a", Value)
     val fcB = mkFormComponent("b", Value)
@@ -87,16 +87,6 @@ class FormModelFullyExpandedSpec extends FlatSpec with Matchers with FormModelSu
     )
 
     formModel shouldBe expected
-  }
-
-  private def mkFormDataRecalculated(kv: (String, String)*): FormDataRecalculated = {
-    val data: Seq[(String, VariadicValue)] = kv.map { case (k, v) => (k, One(v)) }
-    mkVariadicFormDataRecalculated(data: _*)
-  }
-
-  private def mkVariadicFormDataRecalculated(data: (String, VariadicValue)*): FormDataRecalculated = {
-    val fcData = data.map { case (k, v) => (FormComponentId(k), v) }
-    FormDataRecalculated.empty.copy(recData = RecData.fromData(VariadicFormData.create(fcData: _*)))
   }
 
   private def mkPage(formComponent: FormComponent): Page[GroupExpanded] = mkPage(formComponent :: Nil)

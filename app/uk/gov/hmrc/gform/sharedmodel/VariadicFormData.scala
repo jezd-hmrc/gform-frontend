@@ -78,12 +78,22 @@ case class VariadicFormData(data: Map[FormComponentId, VariadicValue]) {
   def addMany(entry: (FormComponentId, Seq[String])): VariadicFormData =
     this addValue (entry._1 -> VariadicValue.Many(entry._2))
 
+  def --(remove: VariadicFormData): VariadicFormData = --(remove.keySet)
+
   def --(formComponents: GenTraversableOnce[FormComponentId]): VariadicFormData =
     VariadicFormData(data -- formComponents)
+
+  def subset(ids: Set[FormComponentId]): VariadicFormData =
+    VariadicFormData(data.filter { case (k, _) => ids.contains(k) })
 
   def collect[B](pf: PartialFunction[(FormComponentId, VariadicValue), B]): Iterable[B] = data.collect(pf)
 
   def contains(id: FormComponentId): Boolean = data.contains(id)
+
+  def mapKeys(f: FormComponentId => FormComponentId): VariadicFormData =
+    VariadicFormData(data.map {
+      case (k, v) => (f(k), v)
+    })
 
   def mapValues(f: (FormComponentId, VariadicValue) => VariadicValue): VariadicFormData =
     VariadicFormData(data.map {

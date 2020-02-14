@@ -94,14 +94,25 @@ trait SectionGen {
 
   def addToListSectionGen: Gen[Section.AddToList] =
     for {
-      addToListId <- AddToListIdGen.addToListIdGen
-      title       <- smartStringGen
-      description <- Gen.option(smartStringGen)
-      shortName   <- Gen.option(smartStringGen)
-      includeIf   <- Gen.option(IncludeIfGen.includeIfGen)
-      repeatsMax  <- Gen.option(FormatExprGen.textExpressionGen)
-      pages       <- PrimitiveGen.oneOrMoreGen(pageGen)
-    } yield Section.AddToList(addToListId, title, description, shortName, includeIf, repeatsMax, pages)
+      addToListId   <- AddToListIdGen.addToListIdGen
+      title         <- smartStringGen
+      description   <- Gen.option(smartStringGen)
+      shortName     <- Gen.option(smartStringGen)
+      includeIf     <- Gen.option(IncludeIfGen.includeIfGen)
+      repeatsMax    <- Gen.option(FormatExprGen.textExpressionGen)
+      pages         <- PrimitiveGen.oneOrMoreGen(pageGen)
+      formComponent <- FormComponentGen.formComponentGen(0)
+      choice        <- ComponentTypeGen.choiceGen
+    } yield
+      Section.AddToList(
+        addToListId,
+        title,
+        description,
+        shortName,
+        includeIf,
+        repeatsMax,
+        pages,
+        formComponent.copy(`type` = choice))
 
   def sectionGen: Gen[Section] = Gen.oneOf(nonRepeatingPageSectionGen, repeatingPageSectionGen)
 }

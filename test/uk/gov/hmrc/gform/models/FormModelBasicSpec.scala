@@ -16,12 +16,15 @@
 
 package uk.gov.hmrc.gform.models
 
+import cats.data.NonEmptyList
 import org.scalatest.{ FlatSpec, Matchers }
 import uk.gov.hmrc.gform.Helpers.toSmartString
 import uk.gov.hmrc.gform.graph.FormTemplateBuilder._
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, FormComponent, Section }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 
 class FormModelBasicSpec extends FlatSpec with Matchers with FormModelSupport {
+
+  val expectedFc = addToListQuestion.copy(id = FormComponentId("1_ownerFc"))
 
   "FormModel.basic" should "expand from formTemplate" in {
     val formModel = mkFormModelBasic(List.empty[Section])
@@ -54,10 +57,16 @@ class FormModelBasicSpec extends FlatSpec with Matchers with FormModelSupport {
     val expected = FormModel[Basic](
       List(
         Singleton(addToList.pages.toList.head, addToList),
-        Repeater(List.empty[AddToListRecord], toSmartString("Pet owner"), None, None, addToList)
+        Repeater(
+          toSmartString("Pet owner"),
+          Some(toSmartString("Pet owner description")),
+          None,
+          None,
+          expectedFc,
+          1,
+          addToList)
       )
     )
-
     formModel shouldBe expected
   }
   it should "expand Section.AddToList with two list-filler pages" in {
@@ -68,7 +77,14 @@ class FormModelBasicSpec extends FlatSpec with Matchers with FormModelSupport {
       List(
         Singleton(addToList.pages.toList(0), addToList),
         Singleton(addToList.pages.toList(1), addToList),
-        Repeater(List.empty[AddToListRecord], toSmartString("Pet owner"), None, None, addToList)
+        Repeater(
+          toSmartString("Pet owner"),
+          Some(toSmartString("Pet owner description")),
+          None,
+          None,
+          expectedFc,
+          1,
+          addToList)
       )
     )
 
@@ -78,13 +94,22 @@ class FormModelBasicSpec extends FlatSpec with Matchers with FormModelSupport {
   it should "expand Section.AddToList with three list-filler pages" in {
     val addToList: Section.AddToList =
       mkAddToListSection(List.empty[FormComponent], List.empty[FormComponent], List.empty[FormComponent])
+
     val formModel = mkFormModelBasic(List(addToList))
+
     val expected = FormModel[Basic](
       List(
         Singleton(addToList.pages.toList(0), addToList),
         Singleton(addToList.pages.toList(1), addToList),
         Singleton(addToList.pages.toList(2), addToList),
-        Repeater(List.empty[AddToListRecord], toSmartString("Pet owner"), None, None, addToList)
+        Repeater(
+          toSmartString("Pet owner"),
+          Some(toSmartString("Pet owner description")),
+          None,
+          None,
+          expectedFc,
+          1,
+          addToList)
       )
     )
 

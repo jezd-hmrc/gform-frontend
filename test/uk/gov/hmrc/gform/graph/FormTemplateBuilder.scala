@@ -51,13 +51,14 @@ object FormTemplateBuilder {
 
   def mkAddToListSection(formComponents: List[FormComponent]*): Section.AddToList =
     Section.AddToList(
-      AddToListId("Owner"),
+      AddToListId("owner"),
       toSmartString("Pet owner"),
+      Some(toSmartString("Pet owner description")),
       None,
       None,
       None,
-      None,
-      NonEmptyList.fromListUnsafe(formComponents.toList.map(page))
+      NonEmptyList.fromListUnsafe(formComponents.toList.map(page)),
+      addToListQuestion
     )
 
   def mkRepeatingPageSection(formComponents: List[FormComponent]): Section.RepeatingPage =
@@ -158,5 +159,10 @@ object FormTemplateBuilder {
     AvailableLanguages.default,
     None
   )
+
+  val addToListQuestion: FormComponent =
+    mkFormComponent(
+      "ownerFc",
+      Choice(YesNo, NonEmptyList.of(toSmartString("yes"), toSmartString("no")), Vertical, List.empty, None))
 
 }

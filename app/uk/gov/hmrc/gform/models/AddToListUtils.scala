@@ -18,13 +18,67 @@ package uk.gov.hmrc.gform.models
 
 import cats.instances.int._
 import cats.syntax.eq._
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.AddToListId
+import scala.util.Try
+import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
+import uk.gov.hmrc.gform.sharedmodel.form.VisitIndex
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ AddToListId, FormComponentId }
 
 object AddToListUtils {
-  def removeRecord(processData: ProcessData, idx: Int, addToListId: AddToListId): ProcessData = {
-    val (a, b) = processData.formModel.pages.partition(pageModel => pageModel.fold(_ => false)(_.index === idx))
-    1 + 1
-    processData
+
+  private val NumericPrefix = "^(\\d+)_(.*)".r
+
+  private def hasPrefix(n: Int, fcId: FormComponentId): Boolean =
+    fcId.value.startsWith(n.toString + "_")
+
+  def getPrefix(fcId: FormComponentId): Option[Int] = toComponents(fcId).map(_._1)
+
+  def toComponents(fcId: FormComponentId): Option[(Int, String)] =
+    fcId.value match {
+      case NumericPrefix(prefix, rest) => Try(prefix.toInt).toOption.map((_, rest))
+      case _                           => None
+    }
+
+  def removeRecord(processData: ProcessData, idx: Int, addToListId: AddToListId): (VariadicFormData, VisitIndex) = {
+    val (c, d) = processData.formModel.pages.partition(_.isAddToList(addToListId))
+
+    val (toBeRemoved, b) =
+      c.partition(pageModel =>
+        pageModel.fold(s => s.page.fields.forall(field => hasPrefix(idx, field.id)))(_.index === idx))
+
+    val (toBeReindex, keepAsIs) = b.partition(pageModel =>
+      pageModel.fold(s => s.page.fields.forall(field => getPrefix(field.id).exists(_ > idx)))(_.index > idx))
+
+    val variadicFormData = processData.data.data
+
+    val s: Set[FormComponentId] = toBeReindex.flatMap(_.allFormComponents.map(_.id)).toSet
+    val variadicFormDataToModify = variadicFormData.subset(s)
+
+    val variadicFormDataToModified = variadicFormDataToModify.mapKeys { fcId =>
+      val components = toComponents(fcId)
+      components.map { case (index, rest) => FormComponentId((index - 1) + "_" + rest) }.getOrElse(fcId)
+    }
+
+    val toBeRemovedIds: List[FormComponentId] = toBeRemoved.flatMap(_.allFormComponents.map(_.id))
+
+    val res = variadicFormData -- toBeRemovedIds -- variadicFormDataToModify ++ variadicFormDataToModified
+
+    /* println("variadicFormDataToModify: " + (variadicFormDataToModify))
+     * println("variadicFormDataToModified: " + (variadicFormDataToModified))
+     *
+     * println("variadicFormData: " + (variadicFormData))
+     * println("res             : " + (res))
+     *
+     * println("addToListId: " + (addToListId))
+     * println("toBeRemoved: ")
+     * toBeRemoved.map(_.allFormComponents.map(_.id)).foreach(println)
+     * println("keepAsIs: ")
+     * keepAsIs.map(_.allFormComponents.map(_.id)).foreach(println)
+     * println("toBeReindex: ")
+     * toBeReindex.map(_.allFormComponents.map(_.id)).foreach(println) */
+
+    //val newFormModel = formModelBuilder.fromRawData(res)
+
+    (res, processData.visitsIndex)
   }
 
 }

@@ -31,7 +31,7 @@ import uk.gov.hmrc.gform.gform.handlers.FormControllerRequestHandler
 import uk.gov.hmrc.gform.gformbackend.GformConnector
 import uk.gov.hmrc.gform.lookup.LookupExtractors
 import uk.gov.hmrc.gform.models.ExpandUtils._
-import uk.gov.hmrc.gform.models.{ AddToListUtils, Repeater, Singleton }
+import uk.gov.hmrc.gform.models.{ AddToListUtils, FormModelBuilder, Repeater, Singleton }
 import uk.gov.hmrc.gform.models.gform.{ FormValidationOutcome, NoSpecificAction }
 import uk.gov.hmrc.gform.models.{ ProcessData, ProcessDataService }
 import uk.gov.hmrc.gform.sharedmodel._
@@ -147,7 +147,7 @@ class FormController(
         def getSectionTitle4Ga(processData: ProcessData, sectionNumber: SectionNumber): SectionTitle4Ga =
           sectionTitle4GaFactory(processData.formModel(sectionNumber).title.value)
 
-        def validateAndUpdateData(cache: AuthCacheWithForm, processData: ProcessData)(
+        def validateAndUpdateData(cache: AuthCacheWithForm, processData: ProcessData, sectionNumber: SectionNumber)(
           toResult: Option[SectionNumber] => Result): Future[Result] =
           for {
             envelope <- fileUploadService.getEnvelope(cache.form.envelopeId)
@@ -187,7 +187,7 @@ class FormController(
                                        cacheUpd,
                                        gformConnector.getAllTaxPeriods,
                                        NoSpecificAction)
-                  result <- validateAndUpdateData(cacheUpd, newProcessData)(toResult) // recursive call
+                  result <- validateAndUpdateData(cacheUpd, newProcessData, sectionNumber)(toResult) // recursive call
                 } yield result
               } else {
                 fastForwardService
@@ -199,7 +199,7 @@ class FormController(
         def processSaveAndContinue(
           processData: ProcessData
         ): Future[Result] =
-          validateAndUpdateData(cache, processData) {
+          validateAndUpdateData(cache, processData, sectionNumber) {
             case Some(sn) =>
               val sectionTitle4Ga = getSectionTitle4Ga(processData, sn)
               Redirect(
@@ -210,7 +210,7 @@ class FormController(
           }
 
         def processSaveAndExit(processData: ProcessData): Future[Result] =
-          validateAndUpdateData(cache, processData) { maybeSn =>
+          validateAndUpdateData(cache, processData, sectionNumber) { maybeSn =>
             val formTemplate = cache.formTemplate
             val envelopeExpiryDate = cache.form.envelopeExpiryDate
             maybeAccessCode match {
@@ -228,13 +228,13 @@ class FormController(
           }
 
         def processBack(processData: ProcessData, sn: SectionNumber): Future[Result] =
-          validateAndUpdateData(cache, processData) { _ =>
+          validateAndUpdateData(cache, processData, sn) { _ =>
             val sectionTitle4Ga = getSectionTitle4Ga(processData, sn)
             Redirect(routes.FormController.form(formTemplateId, maybeAccessCode, sn, sectionTitle4Ga, SeYes))
           }
 
         def handleGroup(processData: ProcessData, anchor: String): Future[Result] =
-          validateAndUpdateData(cache, processData) { _ =>
+          validateAndUpdateData(cache, processData, sectionNumber) { _ =>
             val sectionTitle4Ga = getSectionTitle4Ga(processData, sectionNumber)
             Redirect(
               routes.FormController
@@ -260,8 +260,17 @@ class FormController(
         }
 
         def processRemoveAddToList(processData: ProcessData, idx: Int, addToListId: AddToListId): Future[Result] = {
-          val upd = AddToListUtils.removeRecord(processData, idx, addToListId)
-          Future.successful(Ok("Remove idx: " + idx + " of " + addToListId))
+          val (updData, visitsIndex) = AddToListUtils.removeRecord(processData, idx, addToListId)
+          val formModel = FormModelBuilder.fromCache(cache).fromRawData(updData)
+
+          val lastIndex = formModel.pages.lastIndexWhere(_.isAddToList(addToListId))
+
+          val processDataUpd = processData.copy(
+            data = processData.data.copy(recData = processData.data.recData.copy(data = updData)),
+            formModel = formModel,
+            visitsIndex = visitsIndex
+          )
+          processBack(processDataUpd, SectionNumber(lastIndex))
         }
 
         for {

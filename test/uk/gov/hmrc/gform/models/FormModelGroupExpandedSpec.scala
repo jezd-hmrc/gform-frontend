@@ -25,7 +25,7 @@ import uk.gov.hmrc.gform.sharedmodel.VariadicValue.One
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, FormComponent, FormComponentId, GroupExpanded, Page, Section, Value }
 
-class FormModelGroupExpandedSpec extends FlatSpec with Matchers with FormModelSupport {
+class FormModelGroupExpandedSpec extends FlatSpec with Matchers with RecalculatedFormDataSupport with FormModelSupport {
   "FormModel.expandGroup" should "expand groups in Section.NonRepeatingPage" in {
     val fcA = mkFormComponent("a", Value)
     val fcB = mkFormComponent("b", Value)
@@ -85,16 +85,6 @@ class FormModelGroupExpandedSpec extends FlatSpec with Matchers with FormModelSu
     val expected = FormModel(List(Singleton(expectedPage, nonRepeatingPage)))
 
     formModel shouldBe expected
-  }
-
-  private def mkFormDataRecalculated(kv: (String, String)*): FormDataRecalculated = {
-    val data: Seq[(String, VariadicValue)] = kv.map { case (k, v) => (k, One(v)) }
-    mkVariadicFormDataRecalculated(data: _*)
-  }
-
-  private def mkVariadicFormDataRecalculated(data: (String, VariadicValue)*): FormDataRecalculated = {
-    val fcData = data.map { case (k, v) => (FormComponentId(k), v) }
-    FormDataRecalculated.empty.copy(recData = RecData.fromData(VariadicFormData.create(fcData: _*)))
   }
 
   // TODO JoVl - do we want to show group expanding in RepeatingPage and AddToList?

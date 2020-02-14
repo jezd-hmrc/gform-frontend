@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.gform.sharedmodel.formtemplate
 
+import cats.Eq
 import julienrf.json.derived
 import play.api.libs.json.OFormat
 
@@ -23,4 +24,6 @@ case class AddToListId(value: String) extends AnyVal
 
 object AddToListId {
   implicit val format: OFormat[AddToListId] = derived.oformat
+  implicit val equal: Eq[AddToListId] = Eq.fromUniversalEquals
+
 }

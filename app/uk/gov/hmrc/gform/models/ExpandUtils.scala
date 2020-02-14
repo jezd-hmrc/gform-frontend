@@ -99,9 +99,6 @@ object ExpandUtils {
 
   private val NumericPrefix = "^(\\d+)_.*".r
 
-  private def hasPrefix(n: Int, fcId: FormComponentId): Boolean =
-    fcId.value.startsWith(n.toString + "_")
-
   def addPrefix(n: Int, targetFcId: FormComponentId): FormComponentId =
     targetFcId.value match {
       case NumericPrefix(_) => targetFcId

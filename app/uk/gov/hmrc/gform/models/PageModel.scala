@@ -19,7 +19,7 @@ package uk.gov.hmrc.gform.models
 import uk.gov.hmrc.gform.models.javascript.JsFormComponentModel
 import uk.gov.hmrc.gform.sharedmodel.SmartString
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponent, FullyExpanded, IncludeIf, Page, PageMode, Section }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ AddToListId, FormComponent, FullyExpanded, IncludeIf, Page, PageMode, Section }
 
 sealed trait PageModel[A <: PageMode] extends Product with Serializable {
   def title: SmartString = fold(_.page.title)(_.repTitle)
@@ -29,6 +29,9 @@ sealed trait PageModel[A <: PageMode] extends Product with Serializable {
   def isTerminationPage = fold(_.page.isTerminationPage)(_ => false)
 
   def jsFormComponentModels: List[JsFormComponentModel] = fold(_.page.fields.flatMap(_.jsFormComponentModels))(_ => Nil)
+
+  def isAddToList(addToListId: AddToListId) =
+    fold(_.source.byAddToListId(addToListId))(_.source.byAddToListId(addToListId))
 
   def fold[B](f: Singleton[A] => B)(g: Repeater[A] => B): B = this match {
     case s: Singleton[A] => f(s)

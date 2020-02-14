@@ -33,7 +33,8 @@ import uk.gov.hmrc.gform.sharedmodel.{ VariadicFormData, VariadicValue }
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 
-class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks with FormModelSupport {
+class ExpandUtilsSpec
+    extends FlatSpec with Matchers with PropertyChecks with RecalculatedFormDataSupport with FormModelSupport {
 
   private val lookupExtractors = new LookupExtractors(Map.empty)
 
@@ -787,20 +788,4 @@ class ExpandUtilsSpec extends FlatSpec with Matchers with PropertyChecks with Fo
       None,
       None
     )
-
-  private def variadicFormDataWithSingleValue(value: String, ids: String*): VariadicFormData =
-    ids.toList.foldMap(id => VariadicFormData.one(FormComponentId(id), value))
-
-  private def variadicFormData(kv: (String, String)*): VariadicFormData =
-    kv.toList.foldMap { case (id, v) => VariadicFormData.one(FormComponentId(id), v) }
-
-  private def mkFormDataRecalculated(kv: (String, String)*): FormDataRecalculated = {
-    val data: Seq[(String, VariadicValue)] = kv.map { case (k, v) => (k, One(v)) }
-    mkVariadicFormDataRecalculated(data: _*)
-  }
-
-  private def mkVariadicFormDataRecalculated(data: (String, VariadicValue)*): FormDataRecalculated = {
-    val fcData = data.map { case (k, v) => (FormComponentId(k), v) }
-    FormDataRecalculated.empty.copy(recData = RecData.fromData(VariadicFormData.create(fcData: _*)))
-  }
 }
