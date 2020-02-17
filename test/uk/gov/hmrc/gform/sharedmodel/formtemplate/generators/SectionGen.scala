@@ -94,7 +94,6 @@ trait SectionGen {
 
   def addToListSectionGen: Gen[Section.AddToList] =
     for {
-      addToListId   <- AddToListIdGen.addToListIdGen
       title         <- smartStringGen
       description   <- Gen.option(smartStringGen)
       shortName     <- Gen.option(smartStringGen)
@@ -104,15 +103,8 @@ trait SectionGen {
       formComponent <- FormComponentGen.formComponentGen(0)
       choice        <- ComponentTypeGen.choiceGen
     } yield
-      Section.AddToList(
-        addToListId,
-        title,
-        description,
-        shortName,
-        includeIf,
-        repeatsMax,
-        pages,
-        formComponent.copy(`type` = choice))
+      Section
+        .AddToList(title, description, shortName, includeIf, repeatsMax, pages, formComponent.copy(`type` = choice))
 
   def sectionGen: Gen[Section] = Gen.oneOf(nonRepeatingPageSectionGen, repeatingPageSectionGen)
 }

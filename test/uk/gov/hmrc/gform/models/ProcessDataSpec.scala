@@ -16,25 +16,13 @@
 
 package uk.gov.hmrc.gform.models
 
-import cats.implicits._
 import org.scalatest.{ FlatSpec, Matchers }
 import org.scalatest.prop.TableDrivenPropertyChecks
-import uk.gov.hmrc.gform.GraphSpec
 import uk.gov.hmrc.gform.sharedmodel.form.VisitIndex
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
-import uk.gov.hmrc.gform.graph.{ GraphException, Recalculation }
 import uk.gov.hmrc.gform.graph.FormTemplateBuilder._
-import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
 
-class ProcessDataSpec
-    extends FlatSpec with Matchers with GraphSpec with TableDrivenPropertyChecks with FormModelSupport {
-
-  type EitherEffect[A] = Either[GraphException, A]
-
-  val recalculation: Recalculation[EitherEffect, GraphException] =
-    new Recalculation[EitherEffect, GraphException](booleanExprEval, (s: GraphException) => s)
-
-  val processDataService = new ProcessDataService[EitherEffect, GraphException](recalculation)
+class ProcessDataSpec extends FlatSpec with Matchers with TableDrivenPropertyChecks with FormModelSupport {
 
   "updateSectionVisits" should "reindex visits when repeated section shrinked" in {
 
@@ -69,8 +57,7 @@ class ProcessDataSpec
     val mongoFormModel = mkFormModel(mongoSections)
 
     forAll(visibilityIndices) { (input, expectedOuput) ⇒
-      val res = processDataService
-        .updateSectionVisits(formModel, mongoFormModel, VisitIndex(input))
+      val res = VisitIndex.updateSectionVisits(formModel, mongoFormModel, VisitIndex(input))
       res shouldBe expectedOuput
     }
   }
@@ -109,8 +96,7 @@ class ProcessDataSpec
     val mongoFormModel = mkFormModel(mongoSections)
 
     forAll(visibilityIndices) { (input, expectedOuput) ⇒
-      val res = processDataService
-        .updateSectionVisits(formModel, mongoFormModel, VisitIndex(input))
+      val res = VisitIndex.updateSectionVisits(formModel, mongoFormModel, VisitIndex(input))
       res shouldBe expectedOuput
     }
   }

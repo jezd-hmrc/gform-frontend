@@ -41,24 +41,6 @@ case class ProcessData(
 
 class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
 
-  def updateSectionVisits(
-    formModel: FormModel[FullyExpanded],
-    mongoFormModel: FormModel[FullyExpanded],
-    visitsIndex: VisitIndex
-  ): Set[Int] =
-    visitsIndex.visitsIndex
-      .map { index =>
-        Try(mongoFormModel(index)).toOption.fold(-1) { page =>
-          page.allFormComponents.headOption.fold(-1) { mongoHead =>
-            val firstComponentId = mongoHead.id
-            formModel.pages.indexWhere { pageModel =>
-              pageModel.allFormComponents.headOption.fold(false)(_.id === firstComponentId)
-            }
-          }
-        }
-      }
-      .filterNot(_ === -1)
-
   def hmrcTaxPeriodWithId(recData: RecData): Option[NonEmptyList[HmrcTaxPeriodWithEvaluatedId]] =
     recData.recalculatedTaxPeriod.map {
       case (periodKey, idNumberValue) =>
@@ -100,7 +82,7 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
         obligations,
         FormDataRecalculated.clearTaxResponses)
 
-      val newVisitIndex = updateSectionVisits(formModel, mongoFormModel, cache.form.visitsIndex)
+      val newVisitIndex = VisitIndex.updateSectionVisits(formModel, mongoFormModel, cache.form.visitsIndex)
 
       ProcessData(dataUpd, formModel, VisitIndex(newVisitIndex), obligations)
     }

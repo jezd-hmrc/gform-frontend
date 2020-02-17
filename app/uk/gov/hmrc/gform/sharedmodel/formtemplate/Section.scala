@@ -81,7 +81,6 @@ object Section {
   case class RepeatingPage(page: Page[Basic], repeats: TextExpression) extends Section
 
   case class AddToList(
-    id: AddToListId,
     title: SmartString,
     description: Option[SmartString],
     shortName: Option[SmartString],
@@ -90,6 +89,7 @@ object Section {
     pages: NonEmptyList[Page[Basic]],
     formComponent: FormComponent
   ) extends Section {
+    val id: AddToListId = AddToListId(formComponent.id.value)
     val allIds: List[FormComponentId] = formComponent.id :: pages.toList.flatMap(_.fields.map(_.id))
   }
 

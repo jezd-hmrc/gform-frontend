@@ -51,7 +51,6 @@ object FormTemplateBuilder {
 
   def mkAddToListSection(formComponents: List[FormComponent]*): Section.AddToList =
     Section.AddToList(
-      AddToListId("owner"),
       toSmartString("Pet owner"),
       Some(toSmartString("Pet owner description")),
       None,

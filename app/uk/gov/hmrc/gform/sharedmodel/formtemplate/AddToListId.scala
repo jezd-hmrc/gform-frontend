@@ -20,7 +20,9 @@ import cats.Eq
 import julienrf.json.derived
 import play.api.libs.json.OFormat
 
-case class AddToListId(value: String) extends AnyVal
+case class AddToListId(value: String) extends AnyVal {
+  def toFormComponentId(i: Int): FormComponentId = FormComponentId(i + "_" + value)
+}
 
 object AddToListId {
   implicit val format: OFormat[AddToListId] = derived.oformat

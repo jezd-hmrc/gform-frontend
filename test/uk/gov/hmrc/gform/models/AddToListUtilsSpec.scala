@@ -142,7 +142,7 @@ class AddToListUtilsSpec
     forAll(variations) { (index, expected) ⇒
       val res = AddToListUtils.removeRecord(processData, index, addToListId)
 
-      res._1 shouldBe expected.data
+      res shouldBe expected.data
     }
 
     /* inside(res) {

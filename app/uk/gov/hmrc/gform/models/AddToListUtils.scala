@@ -20,7 +20,6 @@ import cats.instances.int._
 import cats.syntax.eq._
 import scala.util.Try
 import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
-import uk.gov.hmrc.gform.sharedmodel.form.VisitIndex
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ AddToListId, FormComponentId }
 
 object AddToListUtils {
@@ -38,7 +37,7 @@ object AddToListUtils {
       case _                           => None
     }
 
-  def removeRecord(processData: ProcessData, idx: Int, addToListId: AddToListId): (VariadicFormData, VisitIndex) = {
+  def removeRecord(processData: ProcessData, idx: Int, addToListId: AddToListId): VariadicFormData = {
     val (c, d) = processData.formModel.pages.partition(_.isAddToList(addToListId))
 
     val (toBeRemoved, b) =
@@ -62,10 +61,24 @@ object AddToListUtils {
 
     val res = variadicFormData -- toBeRemovedIds -- variadicFormDataToModify ++ variadicFormDataToModified
 
-    /* println("variadicFormDataToModify: " + (variadicFormDataToModify))
+    val wwww: Set[Int] = res.keySet.map { fcId =>
+      toComponents(fcId).map(_._1)
+    }.flatten
+
+    val m = wwww.max
+
+    val ppppp = addToListId.toFormComponentId(m)
+
+    val resres = res - ppppp
+
+    /* println("wwww: " + (wwww))
+     * println("m: " + (m))
+     *
+     * println("variadicFormDataToModify  : " + (variadicFormDataToModify))
      * println("variadicFormDataToModified: " + (variadicFormDataToModified))
      *
      * println("variadicFormData: " + (variadicFormData))
+     * println("toBeRemovedIds  : " + (toBeRemovedIds))
      * println("res             : " + (res))
      *
      * println("addToListId: " + (addToListId))
@@ -78,7 +91,7 @@ object AddToListUtils {
 
     //val newFormModel = formModelBuilder.fromRawData(res)
 
-    (res, processData.visitsIndex)
+    resres
   }
 
 }

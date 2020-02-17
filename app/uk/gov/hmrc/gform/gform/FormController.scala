@@ -260,22 +260,45 @@ class FormController(
         }
 
         def processRemoveAddToList(processData: ProcessData, idx: Int, addToListId: AddToListId): Future[Result] = {
-          val (updData, visitsIndex) = AddToListUtils.removeRecord(processData, idx, addToListId)
-          val formModel = FormModelBuilder.fromCache(cache).fromRawData(updData)
+          val updData = AddToListUtils.removeRecord(processData, idx, addToListId)
+          val updFormModel = FormModelBuilder.fromCache(cache).fromRawData(updData)
 
-          val lastIndex = formModel.pages.lastIndexWhere(_.isAddToList(addToListId))
+          val lastIndex = updFormModel.pages.lastIndexWhere(_.isAddToList(addToListId))
+
+          val visitsIndex = VisitIndex
+            .updateSectionVisits(processData.formModel, updFormModel, processData.visitsIndex)
+
+          /* println("[processRemoveAddToList] formModel.pages.size     : " + (processData.formModel))
+           * processData.formModel.pages.foreach(println)
+           * println("[processRemoveAddToList] mongoFormModel.pages.size: " + (updFormModel.pages.size))
+           * updFormModel.pages.foreach(println) */
+
+          /* println(
+           *   "[processRemoveAddToList] processData.visitsIndex: " + (processData.visitsIndex).visitsIndex.toList.sorted)
+           * println("[processRemoveAddToList] visitsIndex            : " + (visitsIndex.toList.sorted))
+           *
+           * println("lastIndex: " + (lastIndex)) */
 
           val processDataUpd = processData.copy(
             data = processData.data.copy(recData = processData.data.recData.copy(data = updData)),
-            formModel = formModel,
-            visitsIndex = visitsIndex
+            formModel = updFormModel,
+            visitsIndex = VisitIndex(visitsIndex)
           )
-          processBack(processDataUpd, SectionNumber(lastIndex))
+
+          val sn = SectionNumber(lastIndex)
+
+          val cacheUpd = cache.copy(form = cache.form.copy(visitsIndex = VisitIndex(visitsIndex)))
+
+          validateAndUpdateData(cacheUpd, processDataUpd, sn) { _ =>
+            val sectionTitle4Ga = getSectionTitle4Ga(processDataUpd, sn)
+            Redirect(routes.FormController.form(formTemplateId, maybeAccessCode, sn, sectionTitle4Ga, SeYes))
+          }
         }
 
         for {
           processData <- processDataService
                           .getProcessData(dataRaw, cache, gformConnector.getAllTaxPeriods, NoSpecificAction)
+          _ = println("ABCDEF: " + processData.visitsIndex.visitsIndex.toList.sorted)
           nav = Navigator(sectionNumber, processData.formModel, processData.data).navigate
           res <- nav match {
                   case SaveAndContinue                   => processSaveAndContinue(processData)

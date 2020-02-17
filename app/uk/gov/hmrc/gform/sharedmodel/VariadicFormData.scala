@@ -78,6 +78,8 @@ case class VariadicFormData(data: Map[FormComponentId, VariadicValue]) {
   def addMany(entry: (FormComponentId, Seq[String])): VariadicFormData =
     this addValue (entry._1 -> VariadicValue.Many(entry._2))
 
+  def -(remove: FormComponentId): VariadicFormData = --(Set(remove))
+
   def --(remove: VariadicFormData): VariadicFormData = --(remove.keySet)
 
   def --(formComponents: GenTraversableOnce[FormComponentId]): VariadicFormData =
