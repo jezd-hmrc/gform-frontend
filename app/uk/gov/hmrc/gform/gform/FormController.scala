@@ -18,6 +18,7 @@ package uk.gov.hmrc.gform.gform
 
 import cats.instances.future._
 import cats.instances.option._
+import cats.syntax.applicative._
 import cats.syntax.apply._
 import cats.syntax.eq._
 import play.api.i18n.I18nSupport
@@ -259,6 +260,16 @@ class FormController(
           handleGroup(processData.copy(data = updatedData), "")
         }
 
+        def processEditAddToList(processData: ProcessData, idx: Int, addToListId: AddToListId): Future[Result] = {
+          val index = processData.formModel.pages.indexWhere(_.indexOfAddToList(idx, addToListId))
+          val addToListSize = processData.formModel(index).addToListSize
+          val firstAddToListPage = index - addToListSize
+          val sn = SectionNumber(firstAddToListPage)
+
+          val sectionTitle4Ga = getSectionTitle4Ga(processData, sn)
+          Redirect(routes.FormController.form(formTemplateId, maybeAccessCode, sn, sectionTitle4Ga, SeYes)).pure[Future]
+        }
+
         def processRemoveAddToList(processData: ProcessData, idx: Int, addToListId: AddToListId): Future[Result] = {
           val updData = AddToListUtils.removeRecord(processData, idx, addToListId)
           val updFormModel = FormModelBuilder.fromCache(cache).fromRawData(updData)
@@ -267,17 +278,6 @@ class FormController(
 
           val visitsIndex = VisitIndex
             .updateSectionVisits(processData.formModel, updFormModel, processData.visitsIndex)
-
-          /* println("[processRemoveAddToList] formModel.pages.size     : " + (processData.formModel))
-           * processData.formModel.pages.foreach(println)
-           * println("[processRemoveAddToList] mongoFormModel.pages.size: " + (updFormModel.pages.size))
-           * updFormModel.pages.foreach(println) */
-
-          /* println(
-           *   "[processRemoveAddToList] processData.visitsIndex: " + (processData.visitsIndex).visitsIndex.toList.sorted)
-           * println("[processRemoveAddToList] visitsIndex            : " + (visitsIndex.toList.sorted))
-           *
-           * println("lastIndex: " + (lastIndex)) */
 
           val processDataUpd = processData.copy(
             data = processData.data.copy(recData = processData.data.recData.copy(data = updData)),
@@ -298,7 +298,6 @@ class FormController(
         for {
           processData <- processDataService
                           .getProcessData(dataRaw, cache, gformConnector.getAllTaxPeriods, NoSpecificAction)
-          _ = println("ABCDEF: " + processData.visitsIndex.visitsIndex.toList.sorted)
           nav = Navigator(sectionNumber, processData.formModel, processData.data).navigate
           res <- nav match {
                   case SaveAndContinue                   => processSaveAndContinue(processData)
@@ -307,6 +306,7 @@ class FormController(
                   case AddGroup(groupId)                 => processAddGroup(processData, groupId)
                   case RemoveGroup(idx, groupId)         => processRemoveGroup(processData, idx, groupId)
                   case RemoveAddToList(idx, addToListId) => processRemoveAddToList(processData, idx, addToListId)
+                  case EditAddToList(idx, addToListId)   => processEditAddToList(processData, idx, addToListId)
                 }
         } yield res
       }

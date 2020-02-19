@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.gform.models
 
+import cats.instances.int._
+import cats.syntax.eq._
 import uk.gov.hmrc.gform.models.javascript.JsFormComponentModel
 import uk.gov.hmrc.gform.sharedmodel.SmartString
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
@@ -30,8 +32,13 @@ sealed trait PageModel[A <: PageMode] extends Product with Serializable {
 
   def jsFormComponentModels: List[JsFormComponentModel] = fold(_.page.fields.flatMap(_.jsFormComponentModels))(_ => Nil)
 
-  def isAddToList(addToListId: AddToListId) =
+  def isAddToList(addToListId: AddToListId): Boolean =
     fold(_.source.byAddToListId(addToListId))(_.source.byAddToListId(addToListId))
+
+  def indexOfAddToList(index: Int, addToListId: AddToListId): Boolean =
+    fold(_ => false)(r => r.source.byAddToListId(addToListId) && r.index === index)
+
+  def addToListSize: Int = fold(_ => 0)(_.source.pages.size)
 
   def fold[B](f: Singleton[A] => B)(g: Repeater[A] => B): B = this match {
     case s: Singleton[A] => f(s)

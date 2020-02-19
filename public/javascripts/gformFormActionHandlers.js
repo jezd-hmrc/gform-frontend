@@ -40,6 +40,7 @@
         $('#content')
           .on('click', '[type="submit"]', setAction)
           .on('click', '.removeRepeatingSection, #addRepeatingGroup', handleFormSubmit(null, true))
+	  .on("click", "#editAddToList", handleFormSubmit(null, true))
 	  .on('click', '#removeAddToList', handleFormSubmit(null, true))
           .on('click', '#backButton', handleFormSubmit('Back', true))
           .on('click', '#saveComeBackLater', handleFormSubmit('Save', true))

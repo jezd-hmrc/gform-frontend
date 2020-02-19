@@ -42,6 +42,7 @@ case object SaveAndExit extends Direction
 case class AddGroup(groupId: String) extends Direction
 case class RemoveGroup(idx: Int, groupId: String) extends Direction
 case class RemoveAddToList(idx: Int, addToListId: AddToListId) extends Direction
+case class EditAddToList(idx: Int, addToListId: AddToListId) extends Direction
 
 case class Navigator(
   sectionNumber: SectionNumber,
@@ -57,6 +58,7 @@ case class Navigator(
 
   val RemoveGroupR = "RemoveGroup-(\\d*)_(.*)".r.unanchored
   val RemoveAddToListR = "RemoveAddToList-(\\d*)-(.*)".r.unanchored
+  val EditAddToListR = "EditAddToList-(\\d*)-(.*)".r.unanchored
 
   def navigate: Direction = actionValue match {
     case "Save"                        => SaveAndExit
@@ -65,6 +67,7 @@ case class Navigator(
     case x if x.startsWith("AddGroup") => AddGroup(x)
     case RemoveGroupR(idx, x)          => RemoveGroup(idx.toInt, x)
     case RemoveAddToListR(idx, x)      => RemoveAddToList(idx.toInt, AddToListId(x))
+    case EditAddToListR(idx, x)        => EditAddToList(idx.toInt, AddToListId(x))
     case other                         => throw new BadRequestException(s"Invalid action: $other")
   }
 
