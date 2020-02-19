@@ -41,7 +41,7 @@ import uk.gov.hmrc.gform.controllers.helpers.FormDataHelpers
 import uk.gov.hmrc.gform.fileupload.Envelope
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.lookup.{ AjaxLookup, LookupRegistry, RadioLookup }
-import uk.gov.hmrc.gform.models.{ FormModel, PageModel, Repeater, Singleton }
+import uk.gov.hmrc.gform.models.{ FastForward, FormModel, PageModel, Repeater, Singleton }
 import uk.gov.hmrc.gform.models.ExpandUtils._
 import uk.gov.hmrc.gform.models.javascript.JavascriptMaker
 import uk.gov.hmrc.gform.models.helpers.{ Fields, TaxPeriodHelper }
@@ -118,15 +118,12 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     val listResult = errors.map { case (_, validationResult) => validationResult }
     val pageLevelErrorHtml = generatePageLevelErrorHtml(listResult, List.empty)
     val actionForm = uk.gov.hmrc.gform.gform.routes.FormController
-      .updateFormData(formTemplate._id, maybeAccessCode, sectionNumber)
+      .updateFormData(formTemplate._id, maybeAccessCode, sectionNumber, FastForward.Yes)
 
     val fc = repeater.formComponent
 
     val descriptions =
       repeater.repDescription.fold(List.empty[SmartString])(mkRecords(_, repeater.index, repeater.source))
-
-    println("descriptions: ")
-    descriptions.foreach(println)
 
     val recordTable: List[(String, Int)] = descriptions.zipWithIndex.map {
       case (description, index) => (description.value, index + 1)
@@ -184,7 +181,8 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     formMaxAttachmentSizeMB: Int,
     contentTypes: List[ContentType],
     retrievals: MaterialisedRetrievals,
-    obligations: Obligations
+    obligations: Obligations,
+    fastForward: FastForward
   )(implicit request: Request[_], messages: Messages, l: LangADT, sse: SmartStringEvaluator): Html = {
 
     //val page = formModel(sectionNumber)
@@ -202,7 +200,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
       retrievals,
       formLevelHeading)
     val actionForm = uk.gov.hmrc.gform.gform.routes.FormController
-      .updateFormData(formTemplate._id, maybeAccessCode, sectionNumber)
+      .updateFormData(formTemplate._id, maybeAccessCode, sectionNumber, fastForward)
     val listResult = errors.map { case (_, validationResult) => validationResult }
 
     val javascript = JavascriptMaker.generateJs(sectionNumber, formModel, formTemplate)

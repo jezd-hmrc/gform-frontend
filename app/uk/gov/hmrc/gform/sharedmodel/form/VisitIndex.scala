@@ -34,9 +34,7 @@ object VisitIndex {
     formModel: FormModel[FullyExpanded],
     mongoFormModel: FormModel[FullyExpanded],
     visitsIndex: VisitIndex
-  ): Set[Int] = {
-    println("formModel.pages.size     : " + (formModel.pages.size))
-    println("mongoFormModel.pages.size: " + (mongoFormModel.pages.size))
+  ): Set[Int] =
     visitsIndex.visitsIndex
       .map { index =>
         Try(mongoFormModel(index)).toOption.fold(-1) { page =>
@@ -49,7 +47,6 @@ object VisitIndex {
         }
       }
       .filterNot(_ === -1)
-  }
 
   implicit val format: OFormat[VisitIndex] = Json.format
 

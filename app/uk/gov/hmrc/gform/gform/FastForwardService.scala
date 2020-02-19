@@ -25,8 +25,8 @@ import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.fileupload.FileUploadService
 import uk.gov.hmrc.gform.gform.handlers.FormControllerRequestHandler
 import uk.gov.hmrc.gform.gformbackend.GformConnector
+import uk.gov.hmrc.gform.models.{ FastForward, ProcessData, ProcessDataService }
 import uk.gov.hmrc.gform.models.gform.ForceReload
-import uk.gov.hmrc.gform.models.{ ProcessData, ProcessDataService }
 import uk.gov.hmrc.gform.sharedmodel._
 import uk.gov.hmrc.gform.sharedmodel.form.{ FormIdData, FormStatus, InProgress, Summary, UserData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ SeYes, SectionNumber }
@@ -48,15 +48,18 @@ class FastForwardService(
 
   def redirectContinue(
     cache: AuthCacheWithForm,
-    maybeAccessCode: Option[AccessCode])(implicit messages: Messages, hc: HeaderCarrier, l: LangADT) = {
+    maybeAccessCode: Option[AccessCode]
+  )(implicit messages: Messages, hc: HeaderCarrier, l: LangADT) = {
     val dataRaw = cache.variadicFormData
-    redirectWithRecalculation(cache, dataRaw, maybeAccessCode)
+    redirectWithRecalculation(cache, dataRaw, maybeAccessCode, FastForward.Yes)
   }
 
   private def redirectWithRecalculation(
     cache: AuthCacheWithForm,
     dataRaw: VariadicFormData,
-    maybeAccessCode: Option[AccessCode])(implicit messages: Messages, hc: HeaderCarrier, l: LangADT): Future[Result] =
+    maybeAccessCode: Option[AccessCode],
+    fastForward: FastForward
+  )(implicit messages: Messages, hc: HeaderCarrier, l: LangADT): Future[Result] =
     processDataService.getProcessData(dataRaw, cache, gformConnector.getAllTaxPeriods, ForceReload).flatMap {
       processData =>
         implicit val sse = smartStringEvaluatorFactory(
@@ -65,7 +68,8 @@ class FastForwardService(
           cache.form.thirdPartyData,
           cache.form.envelopeId,
           cache.formTemplate)
-        updateUserData(cache, processData, maybeAccessCode)(redirectResult(cache, maybeAccessCode, processData, _))
+        updateUserData(cache, processData, maybeAccessCode, fastForward)(
+          redirectResult(cache, maybeAccessCode, processData, _))
     }
 
   private def redirectResult(
@@ -79,7 +83,7 @@ class FastForwardService(
         val sectionTitle4Ga = sectionTitle4GaFactory(pageModel.title.value)
         Redirect(
           routes.FormController
-            .form(cache.formTemplate._id, maybeAccessCode, sn, sectionTitle4Ga, SeYes))
+            .form(cache.formTemplate._id, maybeAccessCode, sn, sectionTitle4Ga, SeYes, FastForward.Yes))
       case None =>
         Redirect(routes.SummaryController.summaryById(cache.formTemplate._id, maybeAccessCode))
     }
@@ -91,8 +95,11 @@ class FastForwardService(
       .map(_ => Redirect(routes.NewFormController.dashboard(formTemplateId)))
   }
 
-  def updateUserData(cache: AuthCacheWithForm, processData: ProcessData, maybeAccessCode: Option[AccessCode])(
-    toResult: Option[SectionNumber] => Result)(
+  def updateUserData(
+    cache: AuthCacheWithForm,
+    processData: ProcessData,
+    maybeAccessCode: Option[AccessCode],
+    fastForward: FastForward)(toResult: Option[SectionNumber] => Result)(
     implicit messages: Messages,
     hc: HeaderCarrier,
     l: LangADT,
@@ -105,7 +112,8 @@ class FastForwardService(
                   envelope,
                   FormService.extractedValidateFormHelper,
                   validationService.validateFormComponents,
-                  validationService.evaluateValidation
+                  validationService.evaluateValidation,
+                  fastForward
                 )
       userData = UserData(
         cache.form.formData,

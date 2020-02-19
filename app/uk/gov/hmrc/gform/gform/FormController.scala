@@ -32,9 +32,8 @@ import uk.gov.hmrc.gform.gform.handlers.FormControllerRequestHandler
 import uk.gov.hmrc.gform.gformbackend.GformConnector
 import uk.gov.hmrc.gform.lookup.LookupExtractors
 import uk.gov.hmrc.gform.models.ExpandUtils._
-import uk.gov.hmrc.gform.models.{ AddToListUtils, FormModelBuilder, Repeater, Singleton }
+import uk.gov.hmrc.gform.models.{ AddToListUtils, FastForward, FormModelBuilder, ProcessData, ProcessDataService, Repeater, Singleton }
 import uk.gov.hmrc.gform.models.gform.{ FormValidationOutcome, NoSpecificAction }
-import uk.gov.hmrc.gform.models.{ ProcessData, ProcessDataService }
 import uk.gov.hmrc.gform.sharedmodel._
 import uk.gov.hmrc.gform.sharedmodel.form._
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.SectionTitle4Ga._
@@ -78,7 +77,9 @@ class FormController(
     maybeAccessCode: Option[AccessCode],
     sectionNumber: SectionNumber,
     sectionTitle4Ga: SectionTitle4Ga,
-    suppressErrors: SuppressErrors) =
+    suppressErrors: SuppressErrors,
+    fastForward: FastForward
+  ) =
     auth.authAndRetrieveForm(formTemplateId, maybeAccessCode, OperationWithForm.EditForm) {
       implicit request => implicit l => cache => implicit sse =>
         fileUploadService
@@ -113,7 +114,8 @@ class FormController(
                   formMaxAttachmentSizeMB,
                   contentTypes,
                   cache.retrievals,
-                  cache.form.thirdPartyData.obligations
+                  cache.form.thirdPartyData.obligations,
+                  fastForward
                 )
               case repeater: Repeater[_] =>
                 renderer.renderAddToList(
@@ -141,7 +143,8 @@ class FormController(
   def updateFormData(
     formTemplateId: FormTemplateId,
     maybeAccessCode: Option[AccessCode],
-    sectionNumber: SectionNumber
+    sectionNumber: SectionNumber,
+    fastForward: FastForward
   ) = auth.authAndRetrieveForm(formTemplateId, maybeAccessCode, OperationWithForm.EditForm) {
     implicit request => implicit l => cache => implicit sse =>
       processResponseDataFromBody(request, cache.formTemplate) { dataRaw =>
@@ -192,7 +195,8 @@ class FormController(
                 } yield result
               } else {
                 fastForwardService
-                  .updateUserData(cacheUpd, processData.copy(visitsIndex = visitsIndex), maybeAccessCode)(toResult)
+                  .updateUserData(cacheUpd, processData.copy(visitsIndex = visitsIndex), maybeAccessCode, fastForward)(
+                    toResult)
               }
             }
           } yield res
@@ -205,7 +209,13 @@ class FormController(
               val sectionTitle4Ga = getSectionTitle4Ga(processData, sn)
               Redirect(
                 routes.FormController
-                  .form(formTemplateId, maybeAccessCode, sn, sectionTitle4Ga, SuppressErrors(sectionNumber < sn)))
+                  .form(
+                    formTemplateId,
+                    maybeAccessCode,
+                    sn,
+                    sectionTitle4Ga,
+                    SuppressErrors(sectionNumber < sn),
+                    fastForward.next))
             case None =>
               Redirect(routes.SummaryController.summaryById(formTemplateId, maybeAccessCode))
           }
@@ -221,7 +231,7 @@ class FormController(
                 val call = maybeSn match {
                   case Some(sn) =>
                     val sectionTitle4Ga = getSectionTitle4Ga(processData, sn)
-                    routes.FormController.form(formTemplateId, None, sn, sectionTitle4Ga, SeYes)
+                    routes.FormController.form(formTemplateId, None, sn, sectionTitle4Ga, SeYes, FastForward.Yes)
                   case None => routes.SummaryController.summaryById(formTemplateId, maybeAccessCode)
                 }
                 Ok(save_acknowledgement(envelopeExpiryDate, formTemplate, call, frontendAppConfig))
@@ -231,7 +241,8 @@ class FormController(
         def processBack(processData: ProcessData, sn: SectionNumber): Future[Result] =
           validateAndUpdateData(cache, processData, sn) { _ =>
             val sectionTitle4Ga = getSectionTitle4Ga(processData, sn)
-            Redirect(routes.FormController.form(formTemplateId, maybeAccessCode, sn, sectionTitle4Ga, SeYes))
+            Redirect(
+              routes.FormController.form(formTemplateId, maybeAccessCode, sn, sectionTitle4Ga, SeYes, FastForward.Yes))
           }
 
         def handleGroup(processData: ProcessData, anchor: String): Future[Result] =
@@ -239,7 +250,7 @@ class FormController(
             val sectionTitle4Ga = getSectionTitle4Ga(processData, sectionNumber)
             Redirect(
               routes.FormController
-                .form(formTemplateId, maybeAccessCode, sectionNumber, sectionTitle4Ga, SeYes)
+                .form(formTemplateId, maybeAccessCode, sectionNumber, sectionTitle4Ga, SeYes, FastForward.Yes)
                 .url + anchor
             )
           }
@@ -265,9 +276,13 @@ class FormController(
           val addToListSize = processData.formModel(index).addToListSize
           val firstAddToListPage = index - addToListSize
           val sn = SectionNumber(firstAddToListPage)
+          val next = SectionNumber(firstAddToListPage + 1)
 
           val sectionTitle4Ga = getSectionTitle4Ga(processData, sn)
-          Redirect(routes.FormController.form(formTemplateId, maybeAccessCode, sn, sectionTitle4Ga, SeYes)).pure[Future]
+          Redirect(
+            routes.FormController
+              .form(formTemplateId, maybeAccessCode, sn, sectionTitle4Ga, SeYes, FastForward.StopAt(next)))
+            .pure[Future]
         }
 
         def processRemoveAddToList(processData: ProcessData, idx: Int, addToListId: AddToListId): Future[Result] = {
@@ -291,7 +306,8 @@ class FormController(
 
           validateAndUpdateData(cacheUpd, processDataUpd, sn) { _ =>
             val sectionTitle4Ga = getSectionTitle4Ga(processDataUpd, sn)
-            Redirect(routes.FormController.form(formTemplateId, maybeAccessCode, sn, sectionTitle4Ga, SeYes))
+            Redirect(
+              routes.FormController.form(formTemplateId, maybeAccessCode, sn, sectionTitle4Ga, SeYes, FastForward.Yes))
           }
         }
 

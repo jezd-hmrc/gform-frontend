@@ -16,11 +16,12 @@
 
 package uk.gov.hmrc.gform.gform.handlers
 
+import cats.syntax.eq._
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.controllers.{ AuthCacheWithForm, Origin }
 import uk.gov.hmrc.gform.fileupload.Envelope
 import uk.gov.hmrc.gform.models.ExpandUtils.{ nonSubmittedFCsOfNonGroup, submittedFCs }
-import uk.gov.hmrc.gform.models.{ FormModel, ProcessData }
+import uk.gov.hmrc.gform.models.{ FastForward, FormModel, ProcessData }
 import uk.gov.hmrc.gform.models.gform.{ FormComponentValidation, FormValidationOutcome }
 import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, FormDataRecalculated, ThirdPartyData, ValidationResult }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
@@ -110,7 +111,9 @@ class FormValidator(implicit ec: ExecutionContext) {
       List[FormComponentValidation],
       ValidatedType[ValidationResult]) => FormValidationOutcome,
     validateFormComponents: ValidateFormComponents[Future],
-    evaluateValidation: EvaluateValidation)(
+    evaluateValidation: EvaluateValidation,
+    fastForward: FastForward
+  )(
     implicit hc: HeaderCarrier
   ): Future[Option[SectionNumber]] = {
 
@@ -138,7 +141,7 @@ class FormValidator(implicit ec: ExecutionContext) {
                   val hasBeenVisited = processData.visitsIndex.contains(currentSn.value)
 
                   val stop = page.isTerminationPage || !hasBeenVisited
-                  if (isValid && !stop) None else Some(currentSn)
+                  if (isValid && !stop && fastForward.goOn(currentSn)) None else Some(currentSn)
               }
         }
     }
