@@ -196,10 +196,22 @@ class SummarySpec extends Spec with FormModelSupport {
     val expectedResult = List(
       callUrlEscaped(
         routes.FormController
-          .form(formTemplate._id, Some(accessCode), SectionNumber(0), SectionTitle4Ga("Your-details"), SeYes)),
+          .form(
+            formTemplate._id,
+            Some(accessCode),
+            SectionNumber(0),
+            SectionTitle4Ga("Your-details"),
+            SeYes,
+            FastForward.Yes)),
       callUrlEscaped(
         routes.FormController
-          .form(formTemplate._id, Some(accessCode), SectionNumber(1), SectionTitle4Ga("About-you"), SeYes))
+          .form(
+            formTemplate._id,
+            Some(accessCode),
+            SectionNumber(1),
+            SectionTitle4Ga("About-you"),
+            SeYes,
+            FastForward.Yes))
     )
 
     testStringValues(0) should startWith(expectedResult(0))
@@ -765,7 +777,13 @@ class SummarySpec extends Spec with FormModelSupport {
       val doc = Jsoup.parse(htmlAheadOfSection0.toString)
       val urlOfHrefToSection0 = doc.select("a:contains(Change)").get(0).attributes().get("href")
       val targetUrl = uk.gov.hmrc.gform.gform.routes.FormController
-        .form(formTemplate._id, Some(accessCode), SectionNumber(0), SectionTitle4Ga("Your-details"), SeYes)
+        .form(
+          formTemplate._id,
+          Some(accessCode),
+          SectionNumber(0),
+          SectionTitle4Ga("Your-details"),
+          SeYes,
+          FastForward.Yes)
         .url
       urlOfHrefToSection0 shouldBe targetUrl
     }
@@ -774,7 +792,13 @@ class SummarySpec extends Spec with FormModelSupport {
       val doc = Jsoup.parse(htmlAheadOfSection2.toString)
       val urlOfHrefToSection2 = doc.select("a:contains(Change)").get(0).attributes().get("href")
       val targetUrl = uk.gov.hmrc.gform.gform.routes.FormController
-        .form(formTemplate._id, Some(accessCode), SectionNumber(2), SectionTitle4Ga("Business-details"), SeYes)
+        .form(
+          formTemplate._id,
+          Some(accessCode),
+          SectionNumber(2),
+          SectionTitle4Ga("Business-details"),
+          SeYes,
+          FastForward.Yes)
         .url
       urlOfHrefToSection2 shouldBe targetUrl
     }

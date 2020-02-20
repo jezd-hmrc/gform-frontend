@@ -16,11 +16,12 @@
 
 package uk.gov.hmrc.gform.models
 
+import cats.syntax.eq._
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.gform.{ ExprUpdater, FormComponentUpdater }
 import uk.gov.hmrc.gform.graph.RecData
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.Expr
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ AddToListId, Expr }
 import uk.gov.hmrc.gform.sharedmodel.{ SmartString, VariadicFormData }
 import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, FormDataRecalculated, ThirdPartyData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, Exhaustive, ExpandedFormComponent, FormComponent, FormComponentId, FormTemplate, FullyExpanded, GroupExpanded, IncludeIf, Page, PageMode, Section, SectionNumber }
@@ -47,6 +48,9 @@ case class FormModel[A <: PageMode](pages: List[PageModel[A]]) extends AnyVal {
     case (pm @ HasIncludeIf(includeIf), index) =>
       (pm.fold(_.page.fields)(_ => List.empty), includeIf, index)
   }
+
+  def lastSectionNumberWith(addToListId: AddToListId): SectionNumber =
+    SectionNumber(pages.lastIndexWhere(pm => pm.fold(_ => false)(r => r.source.id === addToListId)))
 
 }
 
@@ -161,11 +165,8 @@ class FormModelBuilder(
             Repeater[FullyExpanded](title, description, shortName, includeIf, formComponent, index, source)
           val nextOne: Option[Seq[String]] = data.recData.data.many(formComponent.id)
           val next = nextOne.toSeq.flatten
-          //println("nextOne           : " + (nextOne))
-          //println("next              : " + (next))
-          //println("next.contains( 0 ): " + (next.contains("0")) + ", " + index)
-          val rest = if (next.contains("0")) {
 
+          val rest = if (next.contains("0")) {
             val abc: FormModel[Basic] = FormModel(basicAddToList(source, index + 1))
             val efg: FormModel[GroupExpanded] = expandGroups(abc, data)
             val hij: FormModel[FullyExpanded] = mkFormModel(efg, data)

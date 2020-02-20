@@ -31,7 +31,7 @@ import uk.gov.hmrc.gform.formtemplate.SectionSyntax
 import uk.gov.hmrc.gform.gform.SectionRenderingService
 import uk.gov.hmrc.gform.graph.RecData
 import uk.gov.hmrc.gform.lookup.LookupRegistry
-import uk.gov.hmrc.gform.models.{ FormModel, FormModelSupport, Singleton }
+import uk.gov.hmrc.gform.models.{ FastForward, FormModel, FormModelSupport, Singleton }
 import uk.gov.hmrc.gform.sharedmodel.form.{ FormDataRecalculated, ValidationResult }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.gform.sharedmodel.{ ExampleData, LangADT, NotChecked, VariadicFormData }
@@ -118,7 +118,8 @@ class SectionRenderingServiceSpec extends Spec with FormModelSupport {
         0,
         Nil,
         retrievals,
-        NotChecked
+        NotChecked,
+        FastForward.Yes
       )
 
     val doc = Jsoup.parse(generatedHtml.body)
@@ -166,7 +167,8 @@ class SectionRenderingServiceSpec extends Spec with FormModelSupport {
         0,
         Nil,
         retrievals,
-        NotChecked
+        NotChecked,
+        FastForward.Yes
       )
 
     val doc = Jsoup.parse(generatedHtml.body)
@@ -208,7 +210,8 @@ class SectionRenderingServiceSpec extends Spec with FormModelSupport {
         0,
         Nil,
         retrievals,
-        NotChecked
+        NotChecked,
+        FastForward.Yes
       )
 
     val doc: Document = Jsoup.parse(generatedHtml.body)
@@ -241,7 +244,8 @@ class SectionRenderingServiceSpec extends Spec with FormModelSupport {
         0,
         Nil,
         retrievals,
-        NotChecked
+        NotChecked,
+        FastForward.Yes
       )
 
     val doc = Jsoup.parse(generatedHtml.body)
@@ -338,7 +342,8 @@ class SectionRenderingServiceSpec extends Spec with FormModelSupport {
         0,
         Nil,
         retrievals,
-        NotChecked
+        NotChecked,
+        FastForward.Yes
       )
 
     val doc = Jsoup.parse(generatedHtml.body)
@@ -395,7 +400,8 @@ class SectionRenderingServiceSpec extends Spec with FormModelSupport {
         0,
         Nil,
         retrievals,
-        NotChecked
+        NotChecked,
+        FastForward.Yes
       )
 
     val doc = Jsoup.parse(generatedHtml.body)
@@ -449,7 +455,8 @@ class SectionRenderingServiceSpec extends Spec with FormModelSupport {
         0,
         Nil,
         retrievals,
-        NotChecked
+        NotChecked,
+        FastForward.Yes
       )
 
     val doc = Jsoup.parse(generatedHtml.body)

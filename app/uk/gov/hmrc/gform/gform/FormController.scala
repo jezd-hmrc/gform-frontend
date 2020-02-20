@@ -97,9 +97,9 @@ class FormController(
               )
           }
           .map { handlerResult =>
-            val result = handlerResult.formModel(sectionNumber) match {
+            handlerResult.formModel(sectionNumber) match {
               case singleton: Singleton[_] =>
-                renderer.renderSection(
+                val html = renderer.renderSection(
                   maybeAccessCode,
                   cache.form,
                   sectionNumber,
@@ -117,20 +117,35 @@ class FormController(
                   cache.form.thirdPartyData.obligations,
                   fastForward
                 )
+                Ok(html)
               case repeater: Repeater[_] =>
-                renderer.renderAddToList(
-                  repeater,
-                  handlerResult.formModel,
-                  maybeAccessCode,
-                  cache.form,
-                  sectionNumber,
-                  handlerResult.data,
-                  cache.formTemplate,
-                  handlerResult.result,
-                  cache.retrievals
-                )
+                val redirectToSn = handlerResult.formModel.lastSectionNumberWith(repeater.source.id)
+                if (sectionNumber < redirectToSn) {
+                  val sectionTitle4Ga = sectionTitle4GaFactory(handlerResult.formModel(sectionNumber).title.value)
+                  Redirect(
+                    routes.FormController
+                      .form(
+                        formTemplateId,
+                        maybeAccessCode,
+                        redirectToSn,
+                        sectionTitle4Ga,
+                        suppressErrors,
+                        FastForward.Yes))
+                } else {
+                  val html = renderer.renderAddToList(
+                    repeater,
+                    handlerResult.formModel,
+                    maybeAccessCode,
+                    cache.form,
+                    sectionNumber,
+                    handlerResult.data,
+                    cache.formTemplate,
+                    handlerResult.result,
+                    cache.retrievals
+                  )
+                  Ok(html)
+                }
             }
-            Ok(result)
           }
     }
 
