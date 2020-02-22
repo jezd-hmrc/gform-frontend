@@ -64,6 +64,9 @@ sealed trait Section extends Product with Serializable {
     case s: Section.AddToList        => false
   }
 
+  def addToList: Option[Section.AddToList] =
+    fold[Option[Section.AddToList]](_ => None)(_ => None)(addToList => Some(addToList))
+
   def byAddToListId(addToListId: AddToListId): Boolean = fold(_ => false)(_ => false)(_.id === addToListId)
 
   def fold[B](f: Section.NonRepeatingPage => B)(g: Section.RepeatingPage => B)(h: Section.AddToList => B): B =
@@ -82,15 +85,15 @@ object Section {
 
   case class AddToList(
     title: SmartString,
-    description: Option[SmartString],
-    shortName: Option[SmartString],
+    description: SmartString,
+    shortName: SmartString,
     includeIf: Option[IncludeIf],
     repeatsMax: Option[TextExpression],
     pages: NonEmptyList[Page[Basic]],
-    formComponent: FormComponent
+    addAnotherQuestion: FormComponent
   ) extends Section {
-    val id: AddToListId = AddToListId(formComponent.id.value)
-    val allIds: List[FormComponentId] = formComponent.id :: pages.toList.flatMap(_.fields.map(_.id))
+    val id: AddToListId = AddToListId(addAnotherQuestion.id.value)
+    val allIds: List[FormComponentId] = addAnotherQuestion.id :: pages.toList.flatMap(_.fields.map(_.id))
   }
 
   implicit val format: OFormat[Section] = derived.oformat[Section]

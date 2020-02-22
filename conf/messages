@@ -17,6 +17,7 @@ linkText.signBackIn=Sign back in
 
 addToList.change=Change
 addToList.remove=Remove
+addToList.addOrRemove=Add or remove
 
 button.continue=Continue
 button.saveAndContinue=Save and continue

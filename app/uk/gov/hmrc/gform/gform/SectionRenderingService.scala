@@ -41,11 +41,10 @@ import uk.gov.hmrc.gform.controllers.helpers.FormDataHelpers
 import uk.gov.hmrc.gform.fileupload.Envelope
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.lookup.{ AjaxLookup, LookupRegistry, RadioLookup }
-import uk.gov.hmrc.gform.models.{ FastForward, FormModel, PageModel, Repeater, Singleton }
+import uk.gov.hmrc.gform.models.{ AddToListUtils, DateExpr, FastForward, FormModel, PageModel, Repeater, SectionRenderingInformation, Singleton }
 import uk.gov.hmrc.gform.models.ExpandUtils._
 import uk.gov.hmrc.gform.models.javascript.JavascriptMaker
 import uk.gov.hmrc.gform.models.helpers.{ Fields, TaxPeriodHelper }
-import uk.gov.hmrc.gform.models.{ DateExpr, SectionRenderingInformation }
 import uk.gov.hmrc.gform.sharedmodel._
 import uk.gov.hmrc.gform.sharedmodel.config.ContentType
 import uk.gov.hmrc.gform.sharedmodel.form._
@@ -97,12 +96,6 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     formLevelHeading: Boolean
   )
 
-  private def mkRecords(description: SmartString, index: Int, source: Section.AddToList): List[SmartString] =
-    (1 to index).toList.map { i =>
-      val s: List[Expr] = description.interpolations.map(expr => ExprUpdater(expr, i, source.allIds).updated)
-      description.copy(interpolations = s)
-    }
-
   def renderAddToList(
     repeater: Repeater[FullyExpanded],
     formModel: FormModel[FullyExpanded],
@@ -120,10 +113,9 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     val actionForm = uk.gov.hmrc.gform.gform.routes.FormController
       .updateFormData(formTemplate._id, maybeAccessCode, sectionNumber, FastForward.Yes)
 
-    val fc = repeater.formComponent
+    val fc = repeater.addAnotherQuestion
 
-    val descriptions =
-      repeater.repDescription.fold(List.empty[SmartString])(mkRecords(_, repeater.index, repeater.source))
+    val descriptions = formModel.repeaters(repeater.source.id).map(_.expandedDescription)
 
     val recordTable: List[(String, Int)] = descriptions.zipWithIndex.map {
       case (description, index) => (description.value, index + 1)

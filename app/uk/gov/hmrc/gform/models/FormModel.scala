@@ -17,6 +17,7 @@
 package uk.gov.hmrc.gform.models
 
 import cats.syntax.eq._
+import cats.instances.int._
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.gform.{ ExprUpdater, FormComponentUpdater }
@@ -52,6 +53,44 @@ case class FormModel[A <: PageMode](pages: List[PageModel[A]]) extends AnyVal {
   def lastSectionNumberWith(addToListId: AddToListId): SectionNumber =
     SectionNumber(pages.lastIndexWhere(pm => pm.fold(_ => false)(r => r.source.id === addToListId)))
 
+  def firstsAddToList: Map[AddToListId, Int] =
+    pages.zipWithIndex.foldRight(Map.empty[AddToListId, Int]) {
+      case ((pageModel, index), acc) =>
+        pageModel.sourceIsAddToList.fold(acc) { addToList =>
+          acc + (addToList.id -> index)
+        }
+    }
+
+  def addToListCount(addToListId: AddToListId) = pages.foldRight(0) {
+    case (page, acc) =>
+      page.addToListCount(addToListId) + acc
+  }
+
+  def repeaters(addToListId: AddToListId): List[Repeater[A]] = {
+    val IsRepeater = new IsRepeater(addToListId)
+    pages.collect {
+      case IsRepeater(repeater) => repeater
+    }
+  }
+
+  def repeaterFor(index: Int, addToListId: AddToListId): Option[Repeater[A]] = {
+    val IsRepeater = new IsRepeater(addToListId)
+    pages.collectFirst {
+      case IsRepeater(repeater) if repeater.index === index => repeater
+    }
+  }
+
+  def repeaterFor(addToListId: AddToListId): Option[Repeater[A]] = {
+    val IsRepeater = new IsRepeater(addToListId)
+    pages.collectFirst {
+      case IsRepeater(repeater) => repeater
+    }
+  }
+}
+
+class IsRepeater(addToListId: AddToListId) {
+  def unapply[A <: PageMode](pageModel: PageModel[A]): Option[Repeater[A]] =
+    pageModel.repeaterOf(addToListId)
 }
 
 object HasIncludeIf {
@@ -92,7 +131,7 @@ class FormModelBuilder(
   }
 
   private def mkRepeater(s: Section.AddToList, index: Int): Repeater[Basic] = {
-    val fc = new FormComponentUpdater(s.formComponent, index, s.allIds).updatedWithId
+    val fc = new FormComponentUpdater(s.addAnotherQuestion, index, s.allIds).updatedWithId
     //println("mkRepeater: " + (fc))
     Repeater[Basic](s.title, s.description, s.shortName, s.includeIf, fc, index, s)
   }
@@ -161,8 +200,11 @@ class FormModelBuilder(
           }
 
         case Repeater(title, description, shortName, includeIf, formComponent, index, source) =>
+          val exTitle = AddToListUtils.expandSmartString(title, index, source)
+          val exShortName = AddToListUtils.expandSmartString(shortName, index, source)
+          val exDescription = AddToListUtils.expandSmartString(description, index, source)
           val repeater =
-            Repeater[FullyExpanded](title, description, shortName, includeIf, formComponent, index, source)
+            Repeater[FullyExpanded](exTitle, exDescription, exShortName, includeIf, formComponent, index, source)
           val nextOne: Option[Seq[String]] = data.recData.data.many(formComponent.id)
           val next = nextOne.toSeq.flatten
 

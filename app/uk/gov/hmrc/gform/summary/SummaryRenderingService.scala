@@ -20,23 +20,26 @@ import java.time.format.DateTimeFormatter
 
 import cats.data.Validated.{ Invalid, Valid }
 import cats.instances.future._
+import cats.instances.int._
+import cats.syntax.eq._
 import org.jsoup.Jsoup
 import play.api.i18n.{ I18nSupport, Messages }
-import play.api.mvc.Request
+import play.api.mvc.{ Call, Request }
 import play.twirl.api.{ Html, HtmlFormat }
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.config.FrontendAppConfig
 import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.fileupload.{ Envelope, FileUploadAlgebra }
 import uk.gov.hmrc.gform.gform.{ HtmlSanitiser, SummaryPagePurpose }
+import uk.gov.hmrc.gform.gform.routes
 import uk.gov.hmrc.gform.graph.Recalculation
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
+import uk.gov.hmrc.gform.models.{ AddToListUtils, FastForward }
 import uk.gov.hmrc.gform.models.ExpandUtils._
-import uk.gov.hmrc.gform.models.{ FormModel, FormModelBuilder, Singleton }
+import uk.gov.hmrc.gform.models.{ FormModel, FormModelBuilder, PageModel, Repeater, Singleton }
 import uk.gov.hmrc.gform.models.helpers.Fields.flattenGroups
 import uk.gov.hmrc.gform.models.helpers.{ Fields, TaxPeriodHelper }
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.FullyExpanded
-import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, LangADT, Obligations, PdfHtml, SubmissionRef }
+import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, LangADT, Obligations, PdfHtml, SmartString, SubmissionRef }
 import uk.gov.hmrc.gform.sharedmodel.form.{ FormDataRecalculated, ValidationResult }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.SectionTitle4Ga.sectionTitle4GaFactory
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
@@ -44,6 +47,7 @@ import uk.gov.hmrc.gform.eval.smartstring._
 import uk.gov.hmrc.gform.validation.{ FormFieldValidationResult, ValidationService }
 import uk.gov.hmrc.gform.validation.ValidationUtil.ValidatedType
 import uk.gov.hmrc.gform.views.ViewHelpersAlgebra
+import uk.gov.hmrc.gform.views.html.summary.snippets
 import uk.gov.hmrc.gform.views.html.summary.snippets._
 import uk.gov.hmrc.gform.views.html.summary.summary
 import uk.gov.hmrc.http.HeaderCarrier
@@ -231,10 +235,12 @@ object SummaryRenderingService {
     messages: Messages,
     l: LangADT,
     viewHelpers: ViewHelpersAlgebra,
-    lise: SmartStringEvaluator): List[Html] = {
+    lise: SmartStringEvaluator
+  ): List[Html] = {
 
-    def renderHtmls()(implicit l: LangADT): List[Html] = {
-      val fields: List[FormComponent] = formModel.allFormComponents
+    def renderHtmls(singleton: Singleton[FullyExpanded], sectionNumber: SectionNumber)(
+      implicit l: LangADT): List[Html] = {
+      val fields: List[FormComponent] = singleton.allFormComponents
       def validate(formComponent: FormComponent): Option[FormFieldValidationResult] = {
         val gformErrors = validatedType match {
           case Invalid(errors) => errors
@@ -377,32 +383,73 @@ object SummaryRenderingService {
         fieldValue.presentationHint
           .fold(false)(x => x.contains(InvisibleInSummary))
 
-      val singletonsToRender: List[(Singleton[FullyExpanded], SectionNumber)] =
-        formModel.visibleWithIndex(data).collect {
-          case (s: Singleton[_], i) => (s, i)
-        }
+      val page = singleton.page
+      val sectionTitle4Ga = sectionTitle4GaFactory(page.title.value)
+      val shortNameOrTitle = page.shortName.getOrElse(page.title).value
+      val begin = begin_section(shortNameOrTitle)
+      val end = end_section()
 
-      singletonsToRender
-        .flatMap {
-          case (singleton, sectionNumber) =>
-            val page = singleton.page
-            val sectionTitle4Ga = sectionTitle4GaFactory(page.title.value)
-            val shortNameOrTitle = page.shortName.getOrElse(page.title).value
-            val begin = begin_section(shortNameOrTitle)
-            val end = end_section()
-
-            val middle =
-              page.fields
-                .filterNot(showOnSummary)
-                .map(
-                  valueToHtml(_, formTemplate._id, maybeAccessCode, shortNameOrTitle, sectionNumber, sectionTitle4Ga))
-            begin +: middle :+ end
-        }
+      val middle =
+        page.fields
+          .filterNot(showOnSummary)
+          .map(valueToHtml(_, formTemplate._id, maybeAccessCode, shortNameOrTitle, sectionNumber, sectionTitle4Ga))
+      begin +: middle :+ end
 
     }
 
-    //val fields = sections.flatMap(RepeatingComponentService.atomicFields(_, data.data))
+    def addToListRender(addToList: Section.AddToList): Html = {
+      val repeaters: List[Repeater[FullyExpanded]] = formModel.repeaters(addToList.id)
+      val count = formModel.addToListCount(addToList.id)
+      val sectionNumber = formModel.lastSectionNumberWith(addToList.id)
+      val recordTable: List[SmartString] = repeaters.map(_.expandedDescription)
 
-    renderHtmls()
+      val sectionTitle4Ga: SectionTitle4Ga = sectionTitle4GaFactory(addToList.title.value)
+
+      val url: Call = routes.FormController
+        .form(formTemplate._id, maybeAccessCode, sectionNumber, sectionTitle4Ga, SeYes, FastForward.Yes)
+
+      snippets.addToList(addToList, recordTable, url)
+    }
+
+    val pagesToRender: List[(PageModel[FullyExpanded], SectionNumber)] = formModel.visibleWithIndex(data)
+
+    pagesToRender.flatMap {
+      case (a, sectionNumber) =>
+        val aaaa = new IsFirstSingletonOfAddToList(sectionNumber, formModel)
+        val cccc = new NextRepeaterAfterRepeater(formModel)
+        a match {
+          case aaaa(addToList, c, repeater) =>
+            addToListRender(addToList) +: snippets.repeater(repeater) +: renderHtmls(c, sectionNumber)
+          case (s: Singleton[_]) => renderHtmls(s, sectionNumber)
+          case cccc(repeater)    => snippets.repeater(repeater) :: Nil
+          case r: Repeater[_]    => Nil
+        }
+    }
   }
+}
+
+class NextRepeaterAfterRepeater(formModel: FormModel[FullyExpanded]) {
+  def unapply(page: PageModel[FullyExpanded]): Option[Repeater[FullyExpanded]] =
+    page match {
+      case r: Repeater[_] => formModel.repeaterFor(r.index + 1, r.source.id)
+      case _              => None
+
+    }
+}
+
+class IsFirstSingletonOfAddToList(sectionNumber: SectionNumber, formModel: FormModel[FullyExpanded]) {
+  val lookup: Map[AddToListId, Int] = formModel.firstsAddToList
+  def unapply(
+    page: PageModel[FullyExpanded]): Option[(Section.AddToList, Singleton[FullyExpanded], Repeater[FullyExpanded])] =
+    page match {
+      case s: Singleton[_] =>
+        for {
+          addToList <- s.sourceIsAddToList
+          a         <- lookup.get(addToList.id)
+          repeater  <- formModel.repeaterFor(1, addToList.id)
+          res       <- if (a === sectionNumber.value) Some((addToList, s, repeater)) else None
+        } yield res
+      case _ => None
+
+    }
 }

@@ -19,10 +19,18 @@ package uk.gov.hmrc.gform.models
 import cats.instances.int._
 import cats.syntax.eq._
 import scala.util.Try
-import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
+import uk.gov.hmrc.gform.gform.ExprUpdater
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Expr, Section }
+import uk.gov.hmrc.gform.sharedmodel.{ SmartString, VariadicFormData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ AddToListId, FormComponentId }
 
 object AddToListUtils {
+
+  def expandSmartString(smartString: SmartString, index: Int, source: Section.AddToList): SmartString = {
+    val interpolations: List[Expr] =
+      smartString.interpolations.map(expr => ExprUpdater(expr, index, source.allIds).updated)
+    smartString.copy(interpolations = interpolations)
+  }
 
   private val NumericPrefix = "^(\\d+)_(.*)".r
 

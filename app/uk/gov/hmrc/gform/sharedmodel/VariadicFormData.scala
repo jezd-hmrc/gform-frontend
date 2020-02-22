@@ -183,7 +183,7 @@ object VariadicFormData {
       template.sections.foldMap {
         case s: NonRepeatingPage => listVariadicFormComponentIds(s.page)
         case s: RepeatingPage    => listVariadicFormComponentIds(s.page)
-        case s: AddToList        => s.pages.foldMap(listVariadicFormComponentIds) + s.formComponent.id
+        case s: AddToList        => s.pages.foldMap(listVariadicFormComponentIds(_)) + s.addAnotherQuestion.id
       }
   }
 

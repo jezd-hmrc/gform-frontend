@@ -24,9 +24,7 @@ import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ AddToListId, FormComponent, FullyExpanded, IncludeIf, Page, PageMode, Section }
 
 sealed trait PageModel[A <: PageMode] extends Product with Serializable {
-  def title: SmartString = fold(_.page.title)(_.repTitle)
-
-  def shortName: Option[SmartString] = fold(_.page.shortName)(_.repShortName)
+  def title: SmartString = fold(_.page.title)(_.expandedTitle)
 
   def isTerminationPage = fold(_.page.isTerminationPage)(_ => false)
 
@@ -35,29 +33,34 @@ sealed trait PageModel[A <: PageMode] extends Product with Serializable {
   def isAddToList(addToListId: AddToListId): Boolean =
     fold(_.source.byAddToListId(addToListId))(_.source.byAddToListId(addToListId))
 
+  def repeaterOf(addToListId: AddToListId): Option[Repeater[A]] =
+    fold[Option[Repeater[A]]](_ => None)(r => if (r.source.byAddToListId(addToListId)) Some(r) else None)
+
   def indexOfAddToList(index: Int, addToListId: AddToListId): Boolean =
     fold(_ => false)(r => r.source.byAddToListId(addToListId) && r.index === index)
 
   def addToListSize: Int = fold(_ => 0)(_.source.pages.size)
+
+  def addToListCount(addToListId: AddToListId): Int = fold(_ => 0)(r => if (r.source.id === addToListId) 1 else 0)
+
+  def sourceIsAddToList: Option[Section.AddToList] = fold(_.source.addToList)(_.source.addToList)
 
   def fold[B](f: Singleton[A] => B)(g: Repeater[A] => B): B = this match {
     case s: Singleton[A] => f(s)
     case r: Repeater[A]  => g(r)
   }
 
-  def allFormComponents: List[FormComponent] = fold(_.page.fields)(r => r.formComponent :: Nil)
+  def allFormComponents: List[FormComponent] = fold(_.page.fields)(r => r.addAnotherQuestion :: Nil)
 
 }
 
-case class AddToListRecord(value: String) extends AnyVal
-
 case class Singleton[A <: PageMode](page: Page[A], source: Section) extends PageModel[A]
 case class Repeater[A <: PageMode](
-  repTitle: SmartString,
-  repDescription: Option[SmartString],
-  repShortName: Option[SmartString],
+  expandedTitle: SmartString,
+  expandedDescription: SmartString,
+  expandedShortName: SmartString,
   includeIf: Option[IncludeIf],
-  formComponent: FormComponent,
+  addAnotherQuestion: FormComponent,
   index: Int,
   source: Section.AddToList
 ) extends PageModel[A]
