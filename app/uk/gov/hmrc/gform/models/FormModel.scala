@@ -137,11 +137,15 @@ class FormModelBuilder(
   }
 
   private def mkSingleton(page: Page[Basic], index: Int): Section.AddToList => Page[Basic] = source => {
-    //val fc = new FormComponentUpdater(s.formComponent, index, source.allIds).updatedWithId
-
-    page.copy(fields = page.fields.map(field => new FormComponentUpdater(field, index, source.allIds).updatedWithId))
-    //Singleton()
-    //???
+    val expand: SmartString => SmartString = AddToListUtils.expandSmartString(_, index, source)
+    page.copy(
+      title = expand(page.title),
+      description = page.description.map(expand),
+      shortName = page.shortName.map(expand),
+      progressIndicator = page.progressIndicator.map(expand),
+      continueLabel = page.continueLabel.map(expand),
+      fields = page.fields.map(field => new FormComponentUpdater(field, index, source.allIds).updatedWithId)
+    )
   }
 
   private def basicAddToList(s: Section.AddToList, index: Int): List[PageModel[Basic]] =

@@ -118,7 +118,7 @@ class Recalculation[F[_]: Monad, E](
 
     val graph: Graph[GraphNode, DiEdge] = DependencyGraph.toGraph(formModel)
 
-    val fcLookup_ = formModel.allFormComponents.flatMap(fc => fc.expandFormComponent(data).allIds.map(_ -> fc)).toMap
+    val fcLookup_ = formModel.allFormComponents.map(fc => fc.id -> fc).toMap
 
     val fcLookup = fcLookup_ ++ additionalFcLookup
 

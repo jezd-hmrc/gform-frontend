@@ -24,18 +24,20 @@
   addOrRemoveUrl: Call
 )(implicit messages: Messages, l:LangADT, sse: SmartStringEvaluator)
 
-<div>
-    <dt class="cya-question">
+<dl class="govuk-check-your-answers cya-questions-long add-to-list-summary">
+  <div>
+    <dt class="cya-question add-to-list-header">
       @{addToList.title.value}
     </dt>
     <dd class="cya-answer">
       @for(record <- recordTable) {
        <div>
          @record.value
-       <div>
+       </div>
     }
     </dd>
     <dd class="cya-change">
        <a href="@addOrRemoveUrl.url" class="js-visible">@messages("addToList.addOrRemove")</a>
     </dd>
-</div>
+  </div>
+</dl>

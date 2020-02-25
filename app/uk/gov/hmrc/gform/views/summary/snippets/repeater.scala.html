@@ -23,8 +23,6 @@
   repeater: Repeater[FullyExpanded]
 )(implicit messages: Messages, l:LangADT, sse: SmartStringEvaluator)
 
-<div>
-    <dt class="cya-question">
-      <br/>@{repeater.expandedShortName.value}
-    </dt>
-</div>
+<h3 class="heading-medium">
+    @{repeater.expandedShortName.value}
+</h3>

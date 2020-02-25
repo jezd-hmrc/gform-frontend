@@ -18,7 +18,7 @@ package uk.gov.hmrc.gform.gform
 
 import cats.instances.int._
 import cats.syntax.eq._
-import uk.gov.hmrc.gform.models.ExpandUtils
+import uk.gov.hmrc.gform.models.{ AddToListUtils, ExpandUtils }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 
 class FormComponentUpdater(formComponent: FormComponent, index: Int, baseIds: List[FormComponentId]) {
@@ -47,6 +47,7 @@ class FormComponentUpdater(formComponent: FormComponent, index: Int, baseIds: Li
       case t: HmrcTaxPeriod => t.copy(idNumber = expandExpr(t.idNumber))
       case otherwise        => otherwise
     },
+    label = AddToListUtils.expandSmartString(formComponent.label, index, baseIds),
     validators = formComponent.validators.map { fcv =>
       fcv.copy(validIf = ValidIf(expandBooleanExpr(fcv.validIf.expr)))
     }

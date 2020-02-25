@@ -26,9 +26,12 @@ import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ AddToListId, FormComponentId
 
 object AddToListUtils {
 
-  def expandSmartString(smartString: SmartString, index: Int, source: Section.AddToList): SmartString = {
+  def expandSmartString(smartString: SmartString, index: Int, source: Section.AddToList): SmartString =
+    expandSmartString(smartString, index, source.allIds)
+
+  def expandSmartString(smartString: SmartString, index: Int, ids: List[FormComponentId]): SmartString = {
     val interpolations: List[Expr] =
-      smartString.interpolations.map(expr => ExprUpdater(expr, index, source.allIds).updated)
+      smartString.interpolations.map(expr => ExprUpdater(expr, index, ids).updated)
     smartString.copy(interpolations = interpolations)
   }
 

@@ -413,3 +413,11 @@ dd.hmrc-add-to-a-list__remove {
     display: table-cell;
     text-align: right;
 }
+
+dl.add-to-list-summary {
+    padding-top: 30px;
+}
+
+.add-to-list-header {
+    font-size: 24px;
+}
