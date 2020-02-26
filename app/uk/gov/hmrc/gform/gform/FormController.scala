@@ -187,7 +187,7 @@ class FormController(
               val needsSecondPhaseRecalculation =
                 (before.desRegistrationResponse, after.desRegistrationResponse).mapN(_ =!= _)
 
-              val visitsIndex = cache.form.visitsIndex.visit(sectionNumber)
+              val visitsIndex = processData.visitsIndex.visit(sectionNumber)
 
               val cacheUpd =
                 cache.copy(
@@ -307,7 +307,7 @@ class FormController(
           val lastIndex = updFormModel.pages.lastIndexWhere(_.isAddToList(addToListId))
 
           val visitsIndex = VisitIndex
-            .updateSectionVisits(processData.formModel, updFormModel, processData.visitsIndex)
+            .updateSectionVisits(updFormModel, processData.formModel, processData.visitsIndex)
 
           val processDataUpd = processData.copy(
             data = processData.data.copy(recData = processData.data.recData.copy(data = updData)),
