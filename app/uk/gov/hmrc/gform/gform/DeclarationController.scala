@@ -110,7 +110,7 @@ class DeclarationController(
 
     import i18nSupport._
 
-    val declarationData = FormDataRecalculated(Set.empty, RecData.fromData(dataRaw))
+    val declarationData = FormDataRecalculated(Set.empty, RecData.fromData(dataRaw), FormModel.empty)
 
     for {
       tuple <- removeHiddenSectionDataAndCalculateAttachments(cache, envelope)

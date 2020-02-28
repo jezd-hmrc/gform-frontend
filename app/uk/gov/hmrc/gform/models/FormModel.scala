@@ -115,7 +115,7 @@ class FormModelBuilder(
   )(
     implicit hc: HeaderCarrier
   ): FormModel[FullyExpanded] = {
-    val data = FormDataRecalculated(Set.empty, RecData.fromData(rawData))
+    val data = FormDataRecalculated(Set.empty, RecData.fromData(rawData), FormModel.empty)
     expand(data)
   }
 
@@ -127,6 +127,8 @@ class FormModelBuilder(
     val basicFm: FormModel[Basic] = basic()
     val groupsFm: FormModel[GroupExpanded] = expandGroups(basicFm, data)
     val fullyExpandedFm: FormModel[FullyExpanded] = mkFormModel(groupsFm, data)
+    //println("fullyExpandedFm.pages: ")
+    //fullyExpandedFm.pages.foreach(println)
     fullyExpandedFm
   }
 
@@ -151,7 +153,7 @@ class FormModelBuilder(
   private def basicAddToList(s: Section.AddToList, index: Int): List[PageModel[Basic]] =
     s.pages.map(page => Singleton[Basic](mkSingleton(page, index)(s), s)).toList ++ List(mkRepeater(s, index))
 
-  def basic(): FormModel[Basic] = FormModel[Basic] {
+  private def basic(): FormModel[Basic] = FormModel[Basic] {
     formTemplate.sections
       .flatMap {
         case s: Section.NonRepeatingPage => List(Singleton[Basic](s.page, s))
@@ -160,12 +162,12 @@ class FormModelBuilder(
       }
   }
 
-  def expandGroup(page: Page[Basic], data: FormDataRecalculated): Page[GroupExpanded] = {
+  private def expandGroup(page: Page[Basic], data: FormDataRecalculated): Page[GroupExpanded] = {
     val ss: List[ExpandedFormComponent] = page.fields.map(_.expandFormComponent(data.recData.data))
     page.copy(fields = ss.flatMap(_.formComponents))
   }
 
-  def expandRepeatedSection(
+  private def expandRepeatedSection(
     page: Page[GroupExpanded],
     repeatingPage: Section.RepeatingPage,
     data: FormDataRecalculated,
@@ -176,7 +178,7 @@ class FormModelBuilder(
     ExpandRepeatedSection
       .generateDynamicPages(page, repeatingPage, data, formModel, retrievals, formTemplate, thirdPartyData, envelopeId)
 
-  def expandGroups(formModel: FormModel[Basic], data: FormDataRecalculated): FormModel[GroupExpanded] =
+  private def expandGroups(formModel: FormModel[Basic], data: FormDataRecalculated): FormModel[GroupExpanded] =
     FormModel {
       formModel.pages.map {
         case Singleton(page, source) => Singleton(expandGroup(page, data), source)
@@ -185,7 +187,7 @@ class FormModelBuilder(
       }
     }
 
-  def mkFormModel(
+  private def mkFormModel(
     formModel: FormModel[GroupExpanded],
     data: FormDataRecalculated
   )(
@@ -229,8 +231,6 @@ class FormModelBuilder(
 object FormModel {
 
   def empty[A <: PageMode]: FormModel[A] = FormModel[A](List.empty[PageModel[A]])
-
-  def expandFull(formTemplate: FormTemplate): FormModel[Exhaustive] = ???
 
   def fromCache(cache: AuthCacheWithForm)(
     implicit hc: HeaderCarrier

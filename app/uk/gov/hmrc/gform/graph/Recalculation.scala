@@ -118,6 +118,16 @@ class Recalculation[F[_]: Monad, E](
 
     val graph: Graph[GraphNode, DiEdge] = DependencyGraph.toGraph(formModel)
 
+    val depg = DependencyGraph.constructDependencyGraph(graph)
+
+    println("DEP_G: " + (depg))
+
+    depg match {
+      case Right(xs) => xs.foreach(println)
+      case Left(error) =>
+        println("ERROR: " + error)
+    }
+
     val fcLookup_ = formModel.allFormComponents.map(fc => fc.id -> fc).toMap
 
     val fcLookup = fcLookup_ ++ additionalFcLookup
@@ -171,7 +181,8 @@ class Recalculation[F[_]: Monad, E](
                 visibilitySet,
                 thirdPartyData,
                 envelopeId,
-                formTemplate)
+                formTemplate,
+                formModel)
           for {
             sectionVisible <- isSectionVisible
           } yield {
@@ -220,6 +231,7 @@ class Recalculation[F[_]: Monad, E](
                                  dataLookupUpd,
                                  retrievals,
                                  formTemplate,
+                                 formModel,
                                  thirdPartyData,
                                  envelopeId))
             } yield recalculated
@@ -262,7 +274,8 @@ class Recalculation[F[_]: Monad, E](
                }
     } yield {
       val (allInvisible, recalculatedData) = recalc
-      FormDataRecalculated(allInvisible, recalculatedData)
+      val formModelNew = formModelBuilder.fromRawData(recalculatedData.data)
+      FormDataRecalculated(allInvisible, recalculatedData, formModelNew)
     }
   }
 
@@ -281,6 +294,7 @@ class Recalculation[F[_]: Monad, E](
     dataLookup: RecData,
     retrievals: MaterialisedRetrievals,
     formTemplate: FormTemplate,
+    formModel: FormModel[FullyExpanded],
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId)(implicit hc: HeaderCarrier): F[Either[GraphException, RecData]] =
     Either.fromOption(fcLookup.get(fcId), NoFormComponent(fcId, fcLookup)).traverse { fc =>
@@ -289,7 +303,7 @@ class Recalculation[F[_]: Monad, E](
       else
         fc match {
           case IsHmrcTaxPeriod(taxPeriod) =>
-            recalculate(fc, visSet, dataLookup, retrievals, formTemplate, thirdPartyData, envelopeId).map {
+            recalculate(fc, visSet, dataLookup, retrievals, formTemplate, formModel, thirdPartyData, envelopeId).map {
               case SetEmpty => dataLookup
               case NoChange => dataLookup
               case NewValue(value) =>
@@ -298,7 +312,7 @@ class Recalculation[F[_]: Monad, E](
                   taxPeriod) -> IdNumberValue(value)))
             }
           case IsText(_) | IsTextArea(_) =>
-            recalculate(fc, visSet, dataLookup, retrievals, formTemplate, thirdPartyData, envelopeId).map {
+            recalculate(fc, visSet, dataLookup, retrievals, formTemplate, formModel, thirdPartyData, envelopeId).map {
               case SetEmpty        => dataLookup.copy(data = dataLookup.data addOne (fcId -> ""))
               case NoChange        => dataLookup
               case NewValue(value) => dataLookup.copy(data = dataLookup.data addOne (fcId -> value))
@@ -313,20 +327,21 @@ class Recalculation[F[_]: Monad, E](
     dataLookup: RecData,
     retrievals: MaterialisedRetrievals,
     formTemplate: FormTemplate,
+    formModel: FormModel[FullyExpanded],
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId)(implicit hc: HeaderCarrier): F[RecalculationOp] =
     fc match {
       case HasExpr(SingleExpr(expr)) =>
         val conv: Convertible[F] =
           booleanExprEval.evaluator
-            .eval(visSet, fc.id, expr, dataLookup.data, retrievals, formTemplate, thirdPartyData, envelopeId)
+            .eval(visSet, fc.id, expr, dataLookup.data, retrievals, formTemplate, formModel, thirdPartyData, envelopeId)
         val maxFractionDigitsAndRoundingMode = extractMaxFractionalDigits(fc)
 
         Convertible.round(
           conv,
           maxFractionDigitsAndRoundingMode.maxDigits,
           maxFractionDigitsAndRoundingMode.roundingMode,
-          formTemplate)
+          formModel)
       case _ => RecalculationOp.noChange.pure[F]
     }
 }
@@ -362,6 +377,7 @@ class Evaluator[F[_]: Monad](
     dataLookup: VariadicFormData,
     retrievals: MaterialisedRetrievals,
     formTemplate: FormTemplate,
+    formModel: FormModel[FullyExpanded],
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId)(implicit hc: HeaderCarrier): Convertible[F] =
     expr match {
@@ -378,11 +394,12 @@ class Evaluator[F[_]: Monad](
       case fc: FormCtx         => evalFormCtx(visSet, fc, dataLookup)
       case Sum(fc: FormCtx) =>
         if (isHidden(fc.toFieldId, visSet)) MaybeConvertibleHidden(defaultF, fc.toFieldId)
-        else sum(visSet, fcId, fc.toFieldId, dataLookup, retrievals, formTemplate, thirdPartyData, envelopeId)
+        else
+          sum(visSet, fcId, fc.toFieldId, dataLookup, retrievals, formTemplate, formModel, thirdPartyData, envelopeId)
       case Sum(_) => NonConvertible(RecalculationOp.noChange.pure[F])
       case Else(f1, f2) =>
         val f: Expr => Convertible[F] =
-          eval(visSet, fcId, _, dataLookup, retrievals, formTemplate, thirdPartyData, envelopeId)
+          eval(visSet, fcId, _, dataLookup, retrievals, formTemplate, formModel, thirdPartyData, envelopeId)
         Convertible.orElse(f(f1), f(f2))
 
       case Add(f1, f2) =>
@@ -395,6 +412,7 @@ class Evaluator[F[_]: Monad](
             f2,
             retrievals,
             formTemplate,
+            formModel,
             (_, _) => doComputation(_ + _),
             thirdPartyData,
             envelopeId))
@@ -408,6 +426,7 @@ class Evaluator[F[_]: Monad](
             f2,
             retrievals,
             formTemplate,
+            formModel,
             (_, _) => doComputation(_ - _),
             thirdPartyData,
             envelopeId))
@@ -421,6 +440,7 @@ class Evaluator[F[_]: Monad](
             f2,
             retrievals,
             formTemplate,
+            formModel,
             (_, _) => doComputation(_ * _),
             thirdPartyData,
             envelopeId))
@@ -446,9 +466,10 @@ class Evaluator[F[_]: Monad](
           recalculated.recData.data,
           retrievals,
           formTemplate,
+          recalculated.formModel,
           thirdPartyData,
           envelopeId),
-        formTemplate
+        recalculated.formModel
       )
       .map(_.flatMap(_.cast[NewValue]).map(_.value))
 
@@ -465,6 +486,7 @@ class Evaluator[F[_]: Monad](
     dataLookup: VariadicFormData,
     retrievals: MaterialisedRetrievals,
     formTemplate: FormTemplate,
+    formModel: FormModel[FullyExpanded],
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId)(implicit hc: HeaderCarrier) = {
     val results = dataLookup.collect {
@@ -472,7 +494,16 @@ class Evaluator[F[_]: Monad](
         Constant(value.value)
     }
     val summation = results.foldLeft(Expr.additionIdentityExpr)(Add)
-    eval(visSet, componentContainingSum, summation, dataLookup, retrievals, formTemplate, thirdPartyData, envelopeId)
+    eval(
+      visSet,
+      componentContainingSum,
+      summation,
+      dataLookup,
+      retrievals,
+      formTemplate,
+      formModel,
+      thirdPartyData,
+      envelopeId)
   }
 
   def isHidden(fcId: FormComponentId, visSet: Set[GraphNode]): Boolean =
@@ -497,19 +528,20 @@ class Evaluator[F[_]: Monad](
     yExpr: Expr,
     retrievals: MaterialisedRetrievals,
     formTemplate: FormTemplate,
+    formModel: FormModel[FullyExpanded],
     f: (Convertible[F], Convertible[F]) => (Option[BigDecimal], Option[BigDecimal]) => F[A],
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId
   )(implicit hc: HeaderCarrier): F[A] = {
     def calc(expr: Expr): Convertible[F] =
-      eval(visSet, fcId, expr, dataLookup, retrievals, formTemplate, thirdPartyData, envelopeId)
+      eval(visSet, fcId, expr, dataLookup, retrievals, formTemplate, formModel, thirdPartyData, envelopeId)
 
     val x = calc(xExpr)
     val y = calc(yExpr)
 
     for {
-      maybeBigDecimalA <- Convertible.convert(x, formTemplate)
-      maybeBigDecimalB <- Convertible.convert(y, formTemplate)
+      maybeBigDecimalA <- Convertible.convert(x, formModel)
+      maybeBigDecimalB <- Convertible.convert(y, formModel)
       a                <- f(x, y)(maybeBigDecimalA, maybeBigDecimalB)
     } yield a
 
@@ -527,8 +559,8 @@ case class Converted[F[_]](computable: F[Computable]) extends Convertible[F]
 case class NonConvertible[F[_]](str: F[RecalculationOp]) extends Convertible[F]
 case class MaybeConvertible[F[_]](str: F[String]) extends Convertible[F]
 case class MaybeConvertibleHidden[F[_]: Applicative](str: F[String], fcId: FormComponentId) extends Convertible[F] {
-  def visible[A](formTemplate: FormTemplate, f: String => Option[A]): F[Option[A]] = {
-    val lookup: Map[FormComponentId, FormComponent] = FormModel.expandFull(formTemplate).toLookup
+  def visible[A](formModel: FormModel[FullyExpanded], f: String => Option[A]): F[Option[A]] = {
+    val lookup: Map[FormComponentId, FormComponent] = formModel.toLookup
     val maybeFc: Option[FormComponent] = lookup.get(fcId).filter {
       case IsChoice(_) => false
       case _           => true
@@ -539,7 +571,9 @@ case class MaybeConvertibleHidden[F[_]: Applicative](str: F[String], fcId: FormC
 }
 
 object Convertible {
-  def asString[F[_]: Monad](convertible: Convertible[F], formTemplate: FormTemplate): F[Option[RecalculationOp]] =
+  def asString[F[_]: Monad](
+    convertible: Convertible[F],
+    formModel: FormModel[FullyExpanded]): F[Option[RecalculationOp]] =
     convertible match {
       case Converted(computable) =>
         computable.map {
@@ -547,9 +581,9 @@ object Convertible {
           case Computed(bd)  => Some(NewValue(NumberFormatUtil.defaultFormat.format(bd)))
         }
       case MaybeConvertible(str)            => str.map(a => Some(RecalculationOp.newValue(a)))
-      case m @ MaybeConvertibleHidden(_, _) => m.visible(formTemplate, a => Some(RecalculationOp.newValue(a)))
+      case m @ MaybeConvertibleHidden(_, _) => m.visible(formModel, a => Some(RecalculationOp.newValue(a)))
       case NonConvertible(str)              => str.map(Some.apply)
-      case Nested(convertible)              => convertible.flatMap(a => asString(a, formTemplate))
+      case Nested(convertible)              => convertible.flatMap(a => asString(a, formModel))
     }
 
   def orElse[F[_]: Monad](leftConvertible: Convertible[F], rightConvertible: Convertible[F]): Convertible[F] =
@@ -576,24 +610,24 @@ object Convertible {
       case n @ Nested(convertible) => n
     }
 
-  def convert[F[_]: Monad](convertible: Convertible[F], formTemplate: FormTemplate): F[Option[BigDecimal]] =
+  def convert[F[_]: Monad](convertible: Convertible[F], formModel: FormModel[FullyExpanded]): F[Option[BigDecimal]] =
     convertible match {
       case Converted(computable) =>
         computable.map { case NonComputable => None; case Computed(bd) => Some(bd) }
       case MaybeConvertible(str)            => str.map(BigDecimalUtil.toBigDecimalSafe)
-      case m @ MaybeConvertibleHidden(_, _) => m.visible(formTemplate, BigDecimalUtil.toBigDecimalSafe)
+      case m @ MaybeConvertibleHidden(_, _) => m.visible(formModel, BigDecimalUtil.toBigDecimalSafe)
       case NonConvertible(_)                => Option.empty[BigDecimal].pure[F]
-      case Nested(convertible)              => convertible.flatMap(a => convert(a, formTemplate))
+      case Nested(convertible)              => convertible.flatMap(a => convert(a, formModel))
     }
 
   def round[F[_]: Monad](
     convertible: Convertible[F],
     scale: Int,
     roundingMode: RoundingMode,
-    formTemplate: FormTemplate): F[RecalculationOp] =
-    convert(convertible, formTemplate).flatMap {
+    formModel: FormModel[FullyExpanded]): F[RecalculationOp] =
+    convert(convertible, formModel).flatMap {
       case Some(bd) =>
         RecalculationOp.newValue(NumberFormatUtil.roundAndFormat(bd, scale, roundingMode)).pure[F]
-      case None => Convertible.asString(convertible, formTemplate).map(_.getOrElse(RecalculationOp.noChange))
+      case None => Convertible.asString(convertible, formModel).map(_.getOrElse(RecalculationOp.noChange))
     }
 }

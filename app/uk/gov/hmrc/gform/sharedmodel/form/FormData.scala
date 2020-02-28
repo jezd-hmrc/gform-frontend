@@ -20,13 +20,13 @@ import cats.Semigroup
 import cats.syntax.eq._
 import com.softwaremill.quicklens._
 import play.api.libs.json._
-import uk.gov.hmrc.gform.models.PageModel
+import uk.gov.hmrc.gform.models.{ FormModel, PageModel }
 import uk.gov.hmrc.gform.graph.RecData
 import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponentId, FullyExpanded, PageMode, Section }
 import uk.gov.hmrc.gform.sharedmodel.graph.{ GraphNode, IncludeIfGN, SimpleGN }
 
-case class FormDataRecalculated(invisible: Set[GraphNode], recData: RecData) {
+case class FormDataRecalculated(invisible: Set[GraphNode], recData: RecData, formModel: FormModel[FullyExpanded]) {
 
   val data: VariadicFormData = recData.data // ToDo JoVl Rename to recalculatedData
 
@@ -44,7 +44,7 @@ case class FormDataRecalculated(invisible: Set[GraphNode], recData: RecData) {
 }
 
 object FormDataRecalculated {
-  val empty = FormDataRecalculated(Set.empty, RecData.empty)
+  val empty = FormDataRecalculated(Set.empty, RecData.empty, FormModel.empty)
 
   def clearTaxResponses(data: FormDataRecalculated): FormDataRecalculated =
     data

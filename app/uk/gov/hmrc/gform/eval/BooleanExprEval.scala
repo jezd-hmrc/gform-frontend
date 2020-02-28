@@ -25,9 +25,10 @@ import shapeless.syntax.typeable._
 import scala.language.higherKinds
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.graph.{ Convertible, Evaluator, NewValue }
+import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.sharedmodel.{ VariadicFormData, VariadicValue }
 import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, ThirdPartyData }
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ And, BooleanExpr, Contains, Equals, Expr, FormComponentId, FormCtx, FormTemplate, GreaterThan, GreaterThanOrEquals, IsFalse, IsTrue, LessThan, LessThanOrEquals, Not, NotEquals, Or }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ And, BooleanExpr, Contains, Equals, Expr, FormComponentId, FormCtx, FormTemplate, FullyExpanded, GreaterThan, GreaterThanOrEquals, IsFalse, IsTrue, LessThan, LessThanOrEquals, Not, NotEquals, Or }
 import uk.gov.hmrc.gform.sharedmodel.graph.GraphNode
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -41,10 +42,11 @@ class BooleanExprEval[F[_]: Monad](
     visSet: Set[GraphNode],
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId,
-    formTemplate: FormTemplate)(implicit hc: HeaderCarrier): F[Boolean] = {
+    formTemplate: FormTemplate,
+    formModel: FormModel[FullyExpanded])(implicit hc: HeaderCarrier): F[Boolean] = {
 
     def loop(expr: BooleanExpr): F[Boolean] =
-      isTrue(expr, data, retrievals, visSet, thirdPartyData, envelopeId, formTemplate)
+      isTrue(expr, data, retrievals, visSet, thirdPartyData, envelopeId, formTemplate, formModel)
 
     def compare(
       leftField: Expr,
@@ -60,8 +62,8 @@ class BooleanExprEval[F[_]: Monad](
           case (Some(bdA), Some(bdB)) => bigDecimalRelation(bdA, bdB).pure[F]
           case (_, _) =>
             for {
-              maybeStringA <- Convertible.asString(left, formTemplate)
-              maybeStringB <- Convertible.asString(right, formTemplate)
+              maybeStringA <- Convertible.asString(left, formModel)
+              maybeStringB <- Convertible.asString(right, formModel)
             } yield
               (maybeStringA, maybeStringB) match {
                 case (Some(NewValue(strA)), Some(NewValue(strB))) => stringRelation(strA, strB)
@@ -79,6 +81,7 @@ class BooleanExprEval[F[_]: Monad](
           rightField,
           retrievals,
           formTemplate,
+          formModel,
           doComparison,
           thirdPartyData,
           envelopeId)
@@ -98,9 +101,10 @@ class BooleanExprEval[F[_]: Monad](
               data,
               retrievals,
               formTemplate,
+              formModel,
               thirdPartyData,
               envelopeId),
-            formTemplate)
+            formModel)
           .map(_.flatMap(_.cast[NewValue].map(_.value)))
 
       for {

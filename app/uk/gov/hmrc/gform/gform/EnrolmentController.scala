@@ -326,10 +326,11 @@ class EnrolmentController(
                     env.data.data,
                     env.retrievals,
                     env.formTemplate,
+                    env.data.formModel,
                     ThirdPartyData.empty,
                     EnvelopeId(""))
                 Convertible
-                  .asString(convertible, env.formTemplate)
+                  .asString(convertible, env.data.formModel)
                   .map {
                     case Some(NewValue(value)) => f(x)(value)
                     case _                     => f(x)("")

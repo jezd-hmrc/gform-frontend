@@ -108,7 +108,15 @@ class ComponentsValidator(
     hc: HeaderCarrier): Future[List[(Boolean, SmartString)]] =
     formComponent.validators.traverse { v =>
       booleanExpr
-        .isTrue(v.validIf.expr, data.data, retrievals, data.invisible, thirdPartyData, envelopeId, formTemplate)
+        .isTrue(
+          v.validIf.expr,
+          data.data,
+          retrievals,
+          data.invisible,
+          thirdPartyData,
+          envelopeId,
+          formTemplate,
+          data.formModel)
         .map(b => (b, v.errorMessage))
     }
 
@@ -123,7 +131,15 @@ class ComponentsValidator(
     formComponent.validIf match {
       case Some(vi) =>
         booleanExpr
-          .isTrue(vi.expr, data.data, retrievals, data.invisible, thirdPartyData, envelopeId, formTemplate)
+          .isTrue(
+            vi.expr,
+            data.data,
+            retrievals,
+            data.invisible,
+            thirdPartyData,
+            envelopeId,
+            formTemplate,
+            data.formModel)
           .map {
             case false => validationFailure(formComponent, "generic.error.required", None)
             case true  => validationResult

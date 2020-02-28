@@ -34,6 +34,7 @@ import uk.gov.hmrc.gform.auth._
 import uk.gov.hmrc.gform.auth.models._
 import uk.gov.hmrc.gform.config.{ AppConfig, FrontendAppConfig }
 import uk.gov.hmrc.gform.gformbackend.GformConnector
+import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.sharedmodel.form.{ Form, FormIdData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Enrolment => _, _ }
 import uk.gov.hmrc.http.SessionKeys
@@ -274,7 +275,8 @@ class AuthenticatedRequestActions(
                            cache.retrievals,
                            form.thirdPartyData,
                            form.envelopeId)
-      smartStringEvaluator = smartStringEvaluatorFactory.apply(recalculatedData, retrievals, form, formTemplate)
+      smartStringEvaluator = smartStringEvaluatorFactory
+        .apply(recalculatedData, retrievals, form, formTemplate)
       result <- f(cache)(smartStringEvaluator)
     } yield result
 

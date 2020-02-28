@@ -32,7 +32,7 @@ object DependencyGraph {
   def toGraph(formModel: FormModel[FullyExpanded]): Graph[GraphNode, DiEdge] =
     graphFrom(formModel)
 
-  def toGraphFull(formTemplate: FormTemplate): Graph[GraphNode, DiEdge] = ???
+  //def toGraphFull(formTemplate: FormTemplate): Graph[GraphNode, DiEdge] = ???
   //graphFrom(FormModel.fromformTemplate.expandFormTemplateFull)
 
   private def graphFrom(formModel: FormModel[FullyExpanded]): Graph[GraphNode, DiEdge] = {
