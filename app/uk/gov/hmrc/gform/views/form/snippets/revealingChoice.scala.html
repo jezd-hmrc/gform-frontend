@@ -26,6 +26,7 @@
 @import uk.gov.hmrc.gform.views.html._
 @import uk.gov.hmrc.gform.views.html.form.errors.inline_error_map
 @import play.twirl.api.Html
+@import uk.gov.hmrc.govukfrontend.views.html.components._
 
 @(fieldValue: FormComponent,
 buttonType: String,
@@ -44,47 +45,48 @@ formLevelHeading: Boolean
   LabelHelper.buildRepeatingLabel(fieldValue.label, index).value
 }
 
+
 <div class="govuk-form-group@if(hasErrors) { govuk-form-group--error}">
     <fieldset class="govuk-fieldset" @if(fieldValue.helpText.nonEmpty){ aria-describedby="@{fieldValue.id.value}-hint"}>
         <legend class="form-label.value">
-          @if(!formLevelHeading) {
+            @if(!formLevelHeading) {
             <h1 class="govuk-heading-l">@label</h1>
-          } else {
+            } else {
             @label
-          }
+            }
         </legend>
 
         @if(fieldValue.helpText.nonEmpty) {
-          <span class="form-hint" id="@{fieldValue.id.value}-hint">@{fieldValue.helpText.map(ls=>ls.value).getOrElse("")}</span>
+        <span class="form-hint" id="@{fieldValue.id.value}-hint">@{fieldValue.helpText.map(ls=>ls.value).getOrElse("")}</span>
         }
-        <div class="govuk-@{buttonType}s govuk-@{buttonType}s--conditional" data-module="govuk-@if(buttonType == "radio") {@{buttonType}s} else {@{buttonType}es}">
+
         @inline_error_map(fieldValue, validationResult)
 
-          @optionsSelectionsAndHiddenFields.zipWithIndex.toList.map { case ((option, isSelected, hiddenFields), index) =>
-	    @defining(fieldValue.id.appendIndex(index)) { fcId =>
-              <div class="govuk-@if(buttonType == "radio") {@{buttonType}s__item} else {@{buttonType}es__item}"
-                   @if(hiddenFields.nonEmpty) {
-                     data-target="fields-@fcId"
-                   }>
-                  <input id="@fcId"
-                         name="@{fieldValue.id}"
-                         value="@index"
-                         type="@buttonType"
-                         class="govuk-@if(buttonType == "radio") {@{buttonType}s} else {@{buttonType}es}__input"
-			 @{if(isSelected(index)) "checked" else ""}
-                  />
+        @optionsSelectionsAndHiddenFields.zipWithIndex.toList.map { case ((option, isSelected, hiddenFields), index) =>
+        @defining(fieldValue.id.appendIndex(index)) { fcId =>
+        <div class="govuk-@if(buttonType == "radio") {@{buttonType}s__item} else {@{buttonType}es__item}"
+        @if(hiddenFields.nonEmpty) {
+        data-target="fields-@fcId"
+        }>
+            <input id="@fcId"
+               name="@{fieldValue.id}"
+               value="@index"
+               type="@buttonType"
+               class="govuk-@if(buttonType == "radio") {@{buttonType}s} else {@{buttonType}es}__input"
+               @{if(isSelected(index)) "checked" else ""}
+            />
 
-                  <label class="govuk-label govuk-@if(buttonType == "radio") {@{buttonType}s} else {@{buttonType}es}__label" for="@fcId">
-                    @option.value
-                  </label>
-              </div>
-              <div id="fields-@fcId"
-                   class="govuk-@if(buttonType == "radio") {@{buttonType}s} else {@{buttonType}es}__conditional js-hidden"
-                   aria-hidden="true">
-                  @hiddenFields
-              </div>
-        </div>   }
-	  }
-      </fieldset>
+            <label class="govuk-label govuk-@if(buttonType == "radio") {@{buttonType}s} else {@{buttonType}es}__label" for="@fcId">
+                @option.value
+            </label>
+        </div>
+        <div id="fields-@fcId"
+            class="govuk-@if(buttonType == "radio") {@{buttonType}s} else {@{buttonType}es}__conditional js-hidden"
+            aria-hidden="true">
+            @hiddenFields
+        </div>
+        }
+    }
+    </fieldset>
 
 </div>

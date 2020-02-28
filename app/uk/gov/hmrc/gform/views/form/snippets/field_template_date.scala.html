@@ -16,10 +16,11 @@
 
 @import uk.gov.hmrc.gform.sharedmodel.LabelHelper
 @import uk.gov.hmrc.gform.sharedmodel.form._
-@import uk.gov.hmrc.gform.sharedmodel.formtemplate._
+
 @import uk.gov.hmrc.gform.models._
 @import uk.gov.hmrc.gform.validation.{FormFieldValidationResult, ValidationUtil}
 @import uk.gov.hmrc.gform.views.html.form.errors.inline_error_map
+
 
 @(fieldValue: FormComponent,
   validationResult: Option[FormFieldValidationResult],
@@ -33,7 +34,7 @@
     sse: SmartStringEvaluator)
 
 @safeId(id: String) = @{
-fieldValue.id.withSuffix(id).toString
+ fieldValue.id.withSuffix(id).toString
 }
 
 @hasErrors = @{
@@ -47,56 +48,100 @@ fieldValue.id.withSuffix(id).toString
 
 @fieldLabel = @{LabelHelper.buildRepeatingLabel(fieldValue.label, index).value}
 
-  <div class="form-group @if(hasErrors) { form-group-error }">
-      <fieldset @if(fieldValue.helpText.nonEmpty) { aria-describedby="@{fieldValue.id}-hint" } role="group">
+<!--
+<div class="form-group @if(hasErrors) { form-group-error }">
+    <fieldset @if(fieldValue.helpText.nonEmpty) { aria-describedby="@{fieldValue.id}-hint" } role="group">
 
         <legend>
-          @if(!formLevelHeading) {
+            @if(!formLevelHeading) {
             <h1>@fieldLabel</h1>
-          } else {
+            } else {
             @fieldLabel
-          }
+            }
         </legend>
 
         @if(fieldValue.helpText.nonEmpty) {
-          <span class="form-hint" id="@{fieldValue.id}-hint">@fieldValue.helpText.map(ls=>ls.value).getOrElse("")</span>
+        <span class="form-hint" id="@{fieldValue.id}-hint">@fieldValue.helpText.map(ls=>ls.value).getOrElse("")</span>
         }
 
-          @inline_error_map(fieldValue, validationResult)
+        @inline_error_map(fieldValue, validationResult)
 
-          <div class="form-date">
-              <div class="form-group">
-                  <label class="form-label" for="@{fieldValue.id}-day" data-context="@fieldLabel day">@messages("date.Day")</label>
+        <div class="form-date">
+            <div class="form-group">
+                <label class="form-label" for="@{fieldValue.id}-day" data-context="@fieldLabel day">@messages("date.Day")</label>
 
-                  <input type="text"
-                         name="@{fieldValue.id}-day"
-                         @if(!fieldValue.editable) { readonly="" }
-                         id="@{fieldValue.id}-day"
-                         value="@validationResult.flatMap(_.getOptionalCurrentValue(safeId("day"))).orElse(prepop.map(_.day)).getOrElse("")"
-                         class="@inputClasses input--xxsmall" />
-              </div>
+                <input type="text"
+                       name="@{fieldValue.id}-day"
+                       @if(!fieldValue.editable) { readonly="" }
+                       id="@{fieldValue.id}-day"
+                       value="@validationResult.flatMap(_.getOptionalCurrentValue(safeId("day"))).orElse(prepop.map(_.day)).getOrElse("")"
+                class="@inputClasses input&#45;&#45;xxsmall" />
+            </div>
 
-              <div class="form-group">
-                  <label class="form-label" for="@{fieldValue.id}-month" data-context="@fieldLabel month">@messages("date.Month")</label>
+            <div class="form-group">
+                <label class="form-label" for="@{fieldValue.id}-month" data-context="@fieldLabel month">@messages("date.Month")</label>
 
-                  <input type="text"
-                         name="@{fieldValue.id}-month"
-                         @if(!fieldValue.editable) { readonly="" }
-                         id="@{fieldValue.id}-month"
-                         value="@validationResult.flatMap(_.getOptionalCurrentValue(safeId("month"))).orElse(prepop.map(_.month)).getOrElse("")"
-                         class="@inputClasses input--xxsmall" />
-              </div>
+                <input type="text"
+                       name="@{fieldValue.id}-month"
+                       @if(!fieldValue.editable) { readonly="" }
+                       id="@{fieldValue.id}-month"
+                       value="@validationResult.flatMap(_.getOptionalCurrentValue(safeId("month"))).orElse(prepop.map(_.month)).getOrElse("")"
+                class="@inputClasses input&#45;&#45;xxsmall" />
+            </div>
 
-              <div class="form-group form-group-year">
-                  <label class="form-label" for="@{fieldValue.id}-year" data-context="@fieldLabel year">@messages("date.Year")</label>
+            <div class="form-group form-group-year">
+                <label class="form-label" for="@{fieldValue.id}-year" data-context="@fieldLabel year">@messages("date.Year")</label>
 
-                  <input type="text"
-                         name="@{fieldValue.id}-year"
-                         @if(!fieldValue.editable) { readonly="" }
-                         id="@{fieldValue.id}-year"
-                         value="@validationResult.flatMap(_.getOptionalCurrentValue(safeId("year"))).orElse(prepop.map(_.year)).getOrElse("")"
-                         class="@inputClasses input--xsmall" />
-              </div>
-          </div>
-      </fieldset>
-  </div>
+                <input type="text"
+                       name="@{fieldValue.id}-year"
+                       @if(!fieldValue.editable) { readonly="" }
+                       id="@{fieldValue.id}-year"
+                       value="@validationResult.flatMap(_.getOptionalCurrentValue(safeId("year"))).orElse(prepop.map(_.year)).getOrElse("")"
+                class="@inputClasses input&#45;&#45;xsmall" />
+            </div>
+        </div>
+    </fieldset>
+</div>
+-->
+
+@import uk.gov.hmrc.govukfrontend.views.html.components._
+
+@this(govukDateInput : GovukDateInput)
+
+@()
+
+
+@govukDateInput(DateInput(
+    id = Some("@{fieldValue.id}"),
+    namePrefix = Some("@{fieldValue.id}"),
+    items = Seq(
+      InputItem(
+        name = "day",
+        value = Some("@validationResult.flatMap(_.getOptionalCurrentValue(safeId(\"day\"))).orElse(prepop.map(_.day)).getOrElse(\"\")"),
+        classes = "govuk-inpu--width-2 govuk-input--error"
+      ),
+      InputItem(
+        name = "month",
+        value = Some("@validationResult.flatMap(_.getOptionalCurrentValue(safeId(\"month\"))).orElse(prepop.map(_.month))).getOrElse(\"\")"),
+        classes = "govuk-input--width-2 govuk-input--error"
+      ),
+      InputItem(
+        name = "year",
+        value = Some("@validationResult.flatMap(_.getOptionalCurrentValue(safeId(\"year\"))).orElse(prepop.map(_.year)).getOrElse(\"\")"),
+        classes = "govuk-input--width-4 govuk-input--error"
+      )
+    ),
+    hint = Some(Hint(
+      content = Text("@fieldValue.helpText.map(ls=>ls.value).getOrElse(\"\")")
+    )),
+    errorMessage = Some(ErrorMessage(
+      content = Text("@validationResult")
+    )),
+    fieldset = Some(Fieldset(
+      legend = Some(Legend(
+        content = Text("@fieldLabel"),
+        classes = "govuk-fieldset__legend--xl",
+        isPageHeading = true
+      ))
+    ))
+  ))

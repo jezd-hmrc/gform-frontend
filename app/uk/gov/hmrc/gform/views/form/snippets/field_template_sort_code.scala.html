@@ -15,12 +15,14 @@
  *@
 
 @import uk.gov.hmrc.gform.sharedmodel.form._
-@import uk.gov.hmrc.gform.sharedmodel.formtemplate._
+
 @import uk.gov.hmrc.gform.sharedmodel.LabelHelper
 @import uk.gov.hmrc.gform.sharedmodel.formtemplate.UkSortCode
 @import uk.gov.hmrc.gform.sharedmodel.formtemplate.FormComponent
 @import uk.gov.hmrc.gform.validation.{FormFieldValidationResult, ValidationUtil}
 @import uk.gov.hmrc.gform.views.html.form.errors.inline_error_map
+@import uk.gov.hmrc.govukfrontend.views.html.components._
+
 
 @(fieldValue: FormComponent,
   sC: UkSortCode,
@@ -42,7 +44,7 @@
 
 @label = @{LabelHelper.buildRepeatingLabel(fieldValue.label, index).value}
 
-<div class="form-group @if(hasErrors) { form-group-error }">
+<!-- <div class="form-group @if(hasErrors) { form-group-error }">
   <fieldset role="group" @if(fieldValue.helpText.map(ls=>ls.value).nonEmpty) { aria-describedby="@{fieldValue.id.value}-hint" }>
     <legend>
      @if(!formLevelHeading) { <h1>@label</h1> } else { @label }
@@ -73,4 +75,37 @@
       }
     }
   </fieldset>
-</div>
+</div> -->
+
+@this(govukDateInput : GovukDateInput)
+
+@()
+
+@govukDateInput(DateInput(
+    id = Some("@{fieldValue.id}"),
+    namePrefix = Some("@{fieldValue.id}"),
+    items = Seq(
+      UkSortCode.fields(fieldValue.id).toList.zipWithIndex.map{ case (fieldId, index) =>
+        defining(index + 1){ fieldNumber =>
+          InputItem(
+            name = "@fieldId",
+            value = Some("@validationResult.flatMap(_.getOptionalCurrentValue(fieldId.toString)).getOrElse(\"\")"),
+            classes = "govuk-input--width-2 govuk-input--error"
+          )
+        }
+      }
+    ),
+    hint = Some(Hint(
+      content = Text("@fieldValue.helpText.map(ls=>ls.value).getOrElse(\"\")")
+    )),
+    errorMessage = Some(ErrorMessage(
+      content = Text("@validationResult")
+    )),
+    fieldset = Some(Fieldset(
+      legend = Some(Legend(
+        content = Text("@fieldLabel"),
+        classes = "govuk-fieldset__legend--xl",
+        isPageHeading = true
+      ))
+    ))
+))

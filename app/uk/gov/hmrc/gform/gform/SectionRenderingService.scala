@@ -60,11 +60,11 @@ import uk.gov.hmrc.govukfrontend.views.viewmodels.input.Input
 import uk.gov.hmrc.govukfrontend.views.viewmodels.hint.Hint
 import uk.gov.hmrc.govukfrontend.views.viewmodels.label.Label
 import uk.gov.hmrc.govukfrontend.views.viewmodels.fieldset.{ Fieldset, Legend }
-import uk.gov.hmrc.govukfrontend.views.viewmodels.radios.Radios
+import uk.gov.hmrc.govukfrontend.views.viewmodels.radios.{ RadioItem, Radios }
 import uk.gov.hmrc.govukfrontend.views.viewmodels.errormessage.ErrorMessage
-import uk.gov.hmrc.govukfrontend.views.viewmodels.radios.RadioItem
 import uk.gov.hmrc.govukfrontend.views.viewmodels.content
 import uk.gov.hmrc.govukfrontend.views.viewmodels.checkboxes.{ CheckboxItem, Checkboxes }
+import uk.gov.hmrc.govukfrontend.views.viewmodels.dateinput.{ DateInput, InputItem }
 
 import scala.concurrent.Future
 import uk.gov.hmrc.http.HeaderCarrier
@@ -683,18 +683,18 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
         val govukHint: components.govukHint = new components.govukHint()
         val govukLabel: components.govukLabel = new components.govukLabel()
         new components.govukCheckboxes(govukErrorMessage, govukFieldset, govukHint, govukLabel)(checkboxes)
-      /* html.form.snippets.choice(
-          "checkbox",
-          formComponent,
-          options,
-          orientation,
-          prepopValues,
-          validatedValue,
-          optionalHelpTextMarkDown,
-          index,
-          ei.section.title,
-          ei.formLevelHeading
-        )*/
+      /*html.form.snippets.choice(
+       *   "checkbox",
+       *   formComponent,
+       *   options,
+       *   orientation,
+       *   prepopValues,
+       *   validatedValue,
+       *   optionalHelpTextMarkDown,
+       *   index,
+       *   ei.section.title,
+       *   ei.formLevelHeading
+       * )*/
       case Inline =>
         html.form.snippets.choiceInline(
           formComponent,
@@ -874,6 +874,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
 
   private def htmlForSortCode(
     formComponent: FormComponent,
+    options: NonEmptyList[SmartString],
     sC: UkSortCode,
     expr: Expr,
     fcId: FormComponentId,
@@ -884,13 +885,49 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     isHidden: Boolean)(implicit messages: Messages, l: LangADT, sse: SmartStringEvaluator) = {
     val prepopValue = ei.fieldData.data.oneOrElse(formComponent.id, "")
     val validatedValue = buildFormFieldValidationResult(formComponent, ei, validatedType, data)
-    if (isHidden)
+    if (isHidden) {
       html.form.snippets
         .hidden_field_populated(List(FormRender(formComponent.id.value, formComponent.id.value, prepopValue)))
-    else
-      html.form.snippets
-        .field_template_sort_code(formComponent, sC, prepopValue, validatedValue, index, ei.formLevelHeading)
+    } else {
+      val items = options.zipWithIndex.map {
+        case (option, index) =>
+          InputItem(
+            id = Some(formComponent.id.appendIndex(index).value),
+            name = formComponent.id.appendIndex(index).value,
+            value = Some(index.toString)
+          )
+      }
 
+      val hint = formComponent.helpText.map { ls =>
+        Hint(
+          content = content.Text(ls.value)
+        )
+      }
+
+      val map: Map[String, Set[String]] =
+        validatedValue.map(x => ValidationUtil.renderErrors("", x)).getOrElse(Map.empty)
+      val errors: Option[String] = ValidationUtil.printErrors(map).headOption
+
+      val dateinput = DateInput(
+        id = Some(formComponent.id.value),
+        namePrefix = Some(formComponent.id.value),
+        hint = hint,
+        errorMessage = errors.map(
+          error =>
+            ErrorMessage(
+              content = content.Text(error)
+          )),
+        items = items.toList
+      )
+      val govukErrorMessage: components.govukErrorMessage = new components.govukErrorMessage()
+      val govukHint: components.govukHint = new components.govukHint()
+      val govukLabel: components.govukLabel = new components.govukLabel()
+      new components.govukDateInput(govukErrorMessage, govukHint, govukLabel)(dateinput)
+
+      //html.form.snippets
+      // .field_template_sort_code(formComponent, sC, prepopValue, validatedValue, index, ei.formLevelHeading)
+
+    }
   }
 
   private def htmlForAddress(
@@ -901,27 +938,60 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     ei: ExtraInfo,
     data: FormDataRecalculated)(implicit messages: Messages, l: LangADT, sse: SmartStringEvaluator) = {
     val fieldValues = buildFormFieldValidationResult(formComponent, ei, validatedType, data)
-    html.form.snippets
-      .field_template_address(
-        international,
-        formComponent,
-        fieldValues,
-        index,
-        ei.section.title.value,
-        ei.formLevelHeading)
+    val label = Label(
+      isPageHeading = ei.formLevelHeading,
+      content = content.Text(LabelHelper.buildRepeatingLabel(formComponent.label, index).value)
+    )
+    val hint = formComponent.helpText.map { ls =>
+      Hint(
+        content = content.Text(ls.value)
+      )
+    }
+
+    val map: Map[String, Set[String]] =
+      fieldValues.map(x => ValidationUtil.renderErrors("", x)).getOrElse(Map.empty)
+    val errors: Option[String] = ValidationUtil.printErrors(map).headOption
+
+    val errorMessage = errors.map(
+      error =>
+        ErrorMessage(
+          content = content.Text(error)
+      ))
+
+    val input = Input(
+      id = formComponent.id.value,
+      name = formComponent.id.value,
+      label = label,
+      hint = hint,
+      errorMessage = errorMessage
+    )
+    val govukErrorMessage: components.govukErrorMessage = new components.govukErrorMessage()
+    val govukHint: components.govukHint = new components.govukHint()
+    val govukLabel: components.govukLabel = new components.govukLabel()
+    new components.govukInput(govukErrorMessage, govukHint, govukLabel)(input)
+    /*html.form.snippets
+   * .field_template_address(
+   *   international,
+   *   formComponent,
+   *   fieldValues,
+   *   index,
+   *   ei.section.title.value,
+   *   ei.formLevelHeading
+   * )*/
   }
 
   private def htmlForDate(
     formComponent: FormComponent,
+    options: NonEmptyList[SmartString],
     offset: Offset,
     dateValue: Option[DateValue],
     index: Int,
     validatedType: ValidatedType[ValidationResult],
     ei: ExtraInfo,
     data: FormDataRecalculated,
-    isHidden: Boolean = false)(implicit messages: Messages, l: LangADT, sse: SmartStringEvaluator) = {
+    isHidden: Boolean = false)(implicit messages: Messages, l: LangADT, sse: SmartStringEvaluator): Html = {
     val prepopValues: Option[DateExpr] = dateValue.map(DateExpr.fromDateValue).map(DateExpr.withOffset(offset, _))
-
+    val validatedValue = buildFormFieldValidationResult(formComponent, ei, validatedType, data)
     if (isHidden) {
       html.form.snippets.hidden_field_populated(
         List(
@@ -940,8 +1010,42 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
         )
       )
     } else {
-      val fieldValues = buildFormFieldValidationResult(formComponent, ei, validatedType, data)
-      html.form.snippets.field_template_date(formComponent, fieldValues, prepopValues, index, ei.formLevelHeading)
+      val items = options.zipWithIndex.map {
+        case (option, index) =>
+          InputItem(
+            id = Some(formComponent.id.appendIndex(index).value),
+            name = formComponent.id.appendIndex(index).value,
+            value = Some(index.toString)
+          )
+      }
+
+      val hint = formComponent.helpText.map { ls =>
+        Hint(
+          content = content.Text(ls.value)
+        )
+      }
+
+      val map: Map[String, Set[String]] =
+        validatedValue.map(x => ValidationUtil.renderErrors("", x)).getOrElse(Map.empty)
+      val errors: Option[String] = ValidationUtil.printErrors(map).headOption
+
+      val dateinput = DateInput(
+        id = Some(formComponent.id.value),
+        namePrefix = Some(formComponent.id.value),
+        hint = hint,
+        errorMessage = errors.map(
+          error =>
+            ErrorMessage(
+              content = content.Text(error)
+          )),
+        items = items.toList
+      )
+      val govukErrorMessage: components.govukErrorMessage = new components.govukErrorMessage()
+      val govukHint: components.govukHint = new components.govukHint()
+      val govukLabel: components.govukLabel = new components.govukLabel()
+      new components.govukDateInput(govukErrorMessage, govukHint, govukLabel)(dateinput)
+//      val validatedValue = buildFormFieldValidationResult(formComponent, ei, validatedType, data)
+//      html.form.snippets.field_template_date(formComponent, fieldValues, prepopValues, index, ei.formLevelHeading)
     }
   }
 
