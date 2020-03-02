@@ -110,7 +110,7 @@ class DeclarationController(
 
     import i18nSupport._
 
-    val declarationData = FormDataRecalculated(Set.empty, RecData.fromData(dataRaw), FormModel.empty)
+    val declarationData = FormDataRecalculated(Set.empty, RecData.fromData(dataRaw), FormModel.fromCache(cache))
 
     for {
       tuple <- removeHiddenSectionDataAndCalculateAttachments(cache, envelope)
@@ -195,7 +195,7 @@ class DeclarationController(
 
     cache.formTemplate.destinations match {
       case _: DestinationList => {
-        val formModel: FormModel[FullyExpanded] = FormModel.fromCache(cache)
+        val formModel: FormModel[FullyExpanded] = data.formModel
         val updatedCache = cache.copy(form = updateFormWithDeclaration(cache.form, cache.formTemplate, data))
         gformBackEnd
           .submitWithUpdatedFormStatus(Signed, updatedCache, maybeAccessCode, None, attachments, formModel)

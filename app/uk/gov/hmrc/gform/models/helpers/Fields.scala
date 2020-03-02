@@ -163,11 +163,10 @@ object Fields {
 
   def getHiddenTemplateFields(
     pageModel: PageModel[FullyExpanded],
-    formModel: FormModel[FullyExpanded],
     data: FormDataRecalculated,
     lookupExtractors: LookupExtractors): (List[FormComponent], FormDataRecalculated) = {
     //val renderList: List[PageModel[FullyExpanded]] = formModel.pages.filterNot(_ == pageModel)
-    val sectionAtomicFields: List[FormComponent] = formModel.allFormComponents
+    val sectionAtomicFields: List[FormComponent] = data.formModel.allFormComponents
 
     val submitted = submittedFCs(data, sectionAtomicFields)
     val alwaysEmptyHiddenGroup = getAlwaysEmptyHiddenGroup(data, pageModel, lookupExtractors)

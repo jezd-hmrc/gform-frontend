@@ -278,17 +278,15 @@ class ValidationService(
   }
 
   def validateForm(
-    formModel: FormModel[FullyExpanded],
     cache: AuthCacheWithForm,
-    envelope: Envelope,
-    retrievals: MaterialisedRetrievals
+    envelope: Envelope
   )(
     implicit
     hc: HeaderCarrier,
     messages: Messages,
     l: LangADT,
     sse: SmartStringEvaluator
-  ): Future[(ValidatedType[ValidationResult], Map[FormComponent, FormFieldValidationResult])] = {
+  ): Future[(FormDataRecalculated, ValidatedType[ValidationResult], Map[FormComponent, FormFieldValidationResult])] = {
 
     val dataRaw = cache.variadicFormData
 
@@ -299,12 +297,12 @@ class ValidationService(
       data <- recalculation.recalculateFormData(
                dataRaw,
                cache.formTemplate,
-               retrievals,
+               cache.retrievals,
                cache.form.thirdPartyData,
                cache.form.envelopeId
              )
       //allSections = RepeatingComponentService.getAllSections(cache.formTemplate, data)
-      visibleFormModel = filterPages(formModel, data)
+      visibleFormModel = filterPages(data.formModel, data)
       allFields = visibleFormModel.allFormComponents
       allRequiredFields = allFields.filter(_.mandatory)
       allSubmittedFields = submittedFCs(data, allFields)
@@ -317,16 +315,16 @@ class ValidationService(
                    pageModel,
                    cache.form.envelopeId,
                    envelope,
-                   retrievals,
+                   cache.retrievals,
                    cache.form.thirdPartyData,
                    cache.formTemplate,
                    data,
-                   GetEmailCodeFieldMatcher(formModel)
+                   GetEmailCodeFieldMatcher(data.formModel)
                ))
              .map(Monoid[ValidatedType[ValidationResult]].combineAll)
       v = Monoid.combine(v1, ValidationUtil.validateFileUploadHasScannedFiles(allFieldsToValidate, envelope))
       errors = evaluateValidation(v, allFieldsToValidate, data, envelope).toMap
-    } yield (v, errors)
+    } yield (data, v, errors)
 
   }
 }

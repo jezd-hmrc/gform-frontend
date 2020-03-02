@@ -82,26 +82,6 @@ object AddToListUtils {
 
     val resres = res - ppppp
 
-    /* println("wwww: " + (wwww))
-     * println("m: " + (m))
-     *
-     * println("variadicFormDataToModify  : " + (variadicFormDataToModify))
-     * println("variadicFormDataToModified: " + (variadicFormDataToModified))
-     *
-     * println("variadicFormData: " + (variadicFormData))
-     * println("toBeRemovedIds  : " + (toBeRemovedIds))
-     * println("res             : " + (res))
-     *
-     * println("addToListId: " + (addToListId))
-     * println("toBeRemoved: ")
-     * toBeRemoved.map(_.allFormComponents.map(_.id)).foreach(println)
-     * println("keepAsIs: ")
-     * keepAsIs.map(_.allFormComponents.map(_.id)).foreach(println)
-     * println("toBeReindex: ")
-     * toBeReindex.map(_.allFormComponents.map(_.id)).foreach(println) */
-
-    //val newFormModel = formModelBuilder.fromRawData(res)
-
     resres
   }
 

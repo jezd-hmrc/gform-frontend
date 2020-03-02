@@ -23,16 +23,16 @@ import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.http.BadRequestException
 
 trait Navigation {
-  def formModel: FormModel[FullyExpanded]
+
   def data: FormDataRecalculated
 
-  lazy val availableSectionNumbers: List[SectionNumber] = formModel.visibleWithIndex(data).map(_._2)
+  lazy val availableSectionNumbers: List[SectionNumber] = data.formModel.visibleWithIndex(data).map(_._2)
 
   lazy val minSectionNumber: SectionNumber = availableSectionNumbers.min(Ordering.by((_: SectionNumber).value))
 }
 
 // TODO: Origin should not be in controllers, but Navigator probably should!
-case class Origin(formModel: FormModel[FullyExpanded], val data: FormDataRecalculated) extends Navigation
+case class Origin(data: FormDataRecalculated) extends Navigation
 
 sealed trait Direction
 

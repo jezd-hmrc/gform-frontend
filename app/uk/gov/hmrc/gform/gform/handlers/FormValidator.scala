@@ -35,7 +35,6 @@ class FormValidator(implicit ec: ExecutionContext) {
 
   def validateForm(
     data: FormDataRecalculated,
-    formModel: FormModel[FullyExpanded],
     sn: SectionNumber,
     cache: AuthCacheWithForm,
     envelope: Envelope,
@@ -49,7 +48,6 @@ class FormValidator(implicit ec: ExecutionContext) {
   ): Future[FormValidationOutcome] =
     validate(
       data,
-      formModel,
       sn,
       cache.form.envelopeId,
       envelope,
@@ -69,7 +67,6 @@ class FormValidator(implicit ec: ExecutionContext) {
 
   def validate(
     formDataRecalculated: FormDataRecalculated,
-    formModel: FormModel[FullyExpanded],
     sectionNumber: SectionNumber,
     envelopeId: EnvelopeId,
     envelope: Envelope,
@@ -81,6 +78,7 @@ class FormValidator(implicit ec: ExecutionContext) {
   )(
     implicit hc: HeaderCarrier
   ): Future[(List[(FormComponent, FormFieldValidationResult)], ValidatedType[ValidationResult], Envelope)] = {
+    val formModel = formDataRecalculated.formModel
     val pageModel = formModel(sectionNumber)
     val nonSubmittedYet = nonSubmittedFCsOfNonGroup(formDataRecalculated, pageModel)
     //val allFC = submittedFCs(formDataRecalculated, formModel.flatMap(_.expandSection(formDataRecalculated.data).allFCs)) ++ nonSubmittedYet
@@ -117,10 +115,10 @@ class FormValidator(implicit ec: ExecutionContext) {
     implicit hc: HeaderCarrier
   ): Future[Option[SectionNumber]] = {
 
-    val formModel: FormModel[FullyExpanded] = processData.formModel
+    //val formModel: FormModel[FullyExpanded] = processData.formModel
     val data = processData.data
 
-    val availableSectionNumbers: List[SectionNumber] = Origin(formModel, data).availableSectionNumbers
+    val availableSectionNumbers: List[SectionNumber] = Origin(data).availableSectionNumbers
     availableSectionNumbers.foldLeft(Future.successful(None: Option[SectionNumber])) {
       case (accF, currentSn) =>
         accF.flatMap {
@@ -128,7 +126,6 @@ class FormValidator(implicit ec: ExecutionContext) {
           case None =>
             validateForm(
               data,
-              formModel,
               currentSn,
               cache,
               envelope,
@@ -137,7 +134,7 @@ class FormValidator(implicit ec: ExecutionContext) {
               evaluateValidation)
               .map {
                 case FormValidationOutcome(isValid, _, _) =>
-                  val page = formModel(currentSn)
+                  val page = data.formModel(currentSn)
                   val hasBeenVisited = processData.visitsIndex.contains(currentSn.value)
 
                   val stop = page.isTerminationPage || !hasBeenVisited

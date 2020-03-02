@@ -83,12 +83,7 @@ class RealSmartStringEvaluatorFactory(evaluator: Evaluator[Id]) extends SmartStr
             s.interpolations
               .map { interpolation =>
                 val interpolated = eval(interpolation)
-                val formatType =
-                  ExprFormat.formatForExpr(
-                    interpolation,
-                    formTemplate
-                      .expandFormTemplate(recalculatedFormData.data)
-                      .formComponentsLookup(recalculatedFormData.data))
+                val formatType = ExprFormat.formatForExpr(interpolation, recalculatedFormData.formModel)
                 val formatted = formatType match {
                   case FormatType.Default        => interpolated
                   case FormatType.FromText(text) => TextFormatter.componentText(interpolated, text)

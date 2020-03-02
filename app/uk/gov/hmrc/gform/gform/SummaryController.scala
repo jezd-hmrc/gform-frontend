@@ -75,14 +75,12 @@ class SummaryController(
         processResponseDataFromBody(request, cache.formTemplate) { dataRaw =>
           val envelopeF = fileUploadService.getEnvelope(cache.form.envelopeId)
 
-          val formModel: FormModel[FullyExpanded] = FormModelBuilder.fromCache(cache).fromRawData(dataRaw)
-//              val formModel = FormModel.expand(formTemplate, data)
           val formFieldValidationResultsF = for {
             envelope <- envelopeF
-            errors   <- validationService.validateForm(formModel, cache, envelope, cache.retrievals)
+            errors   <- validationService.validateForm(cache, envelope)
           } yield errors
 
-          val isFormValidF: Future[Boolean] = formFieldValidationResultsF.map(x => ValidationUtil.isFormValid(x._2))
+          val isFormValidF: Future[Boolean] = formFieldValidationResultsF.map(x => ValidationUtil.isFormValid(x._3))
 
           lazy val redirectToDeclaration = gformConnector
             .updateUserData(

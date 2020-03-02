@@ -97,19 +97,17 @@ class FormController(
               )
           }
           .map { handlerResult =>
-            handlerResult.formModel(sectionNumber) match {
+            val formModel = handlerResult.data.formModel
+            val pageModel = formModel(sectionNumber)
+            pageModel match {
               case singleton: Singleton[_] =>
                 val html = renderer.renderSection(
                   maybeAccessCode,
                   cache.form,
                   sectionNumber,
-                  handlerResult.data,
+                  handlerResult,
                   cache.formTemplate,
-                  handlerResult.result,
-                  handlerResult.envelope,
                   cache.form.envelopeId,
-                  handlerResult.validatedType,
-                  handlerResult.formModel,
                   singleton,
                   formMaxAttachmentSizeMB,
                   contentTypes,
@@ -119,9 +117,9 @@ class FormController(
                 )
                 Ok(html)
               case repeater: Repeater[_] =>
-                val redirectToSn = handlerResult.formModel.lastSectionNumberWith(repeater.source.id)
+                val redirectToSn = formModel.lastSectionNumberWith(repeater.source.id)
                 if (sectionNumber < redirectToSn) {
-                  val sectionTitle4Ga = sectionTitle4GaFactory(handlerResult.formModel(sectionNumber).title.value)
+                  val sectionTitle4Ga = sectionTitle4GaFactory(pageModel.title.value)
                   Redirect(
                     routes.FormController
                       .form(
@@ -134,7 +132,7 @@ class FormController(
                 } else {
                   val html = renderer.renderAddToList(
                     repeater,
-                    handlerResult.formModel,
+                    formModel,
                     maybeAccessCode,
                     cache.form,
                     sectionNumber,
@@ -172,7 +170,6 @@ class FormController(
             envelope <- fileUploadService.getEnvelope(cache.form.envelopeId)
             FormValidationOutcome(_, formData, v) <- handler.handleFormValidation(
                                                       processData.data,
-                                                      processData.formModel,
                                                       sectionNumber,
                                                       cache,
                                                       envelope,
@@ -310,8 +307,10 @@ class FormController(
             .updateSectionVisits(updFormModel, processData.formModel, processData.visitsIndex)
 
           val processDataUpd = processData.copy(
-            data = processData.data.copy(recData = processData.data.recData.copy(data = updData)),
-            formModel = updFormModel,
+            data = processData.data.copy(
+              recData = processData.data.recData.copy(data = updData),
+              formModel = updFormModel
+            ),
             visitsIndex = VisitIndex(visitsIndex)
           )
 

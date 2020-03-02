@@ -39,6 +39,7 @@ import uk.gov.hmrc.gform.config.FrontendAppConfig
 import uk.gov.hmrc.gform.controllers.Origin
 import uk.gov.hmrc.gform.controllers.helpers.FormDataHelpers
 import uk.gov.hmrc.gform.fileupload.Envelope
+import uk.gov.hmrc.gform.gform.handlers.FormHandlerResult
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.lookup.{ AjaxLookup, LookupRegistry, RadioLookup }
 import uk.gov.hmrc.gform.models.{ AddToListUtils, DateExpr, FastForward, FormModel, PageModel, Repeater, SectionRenderingInformation, Singleton }
@@ -85,7 +86,6 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
 
   case class ExtraInfo(
     singleton: Singleton[FullyExpanded],
-    formModel: FormModel[FullyExpanded],
     maybeAccessCode: Option[AccessCode],
     sectionNumber: SectionNumber,
     fieldData: FormDataRecalculated,
@@ -129,7 +129,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
       }
 
     val (hiddenTemplateFields, fieldDataUpd) =
-      Fields.getHiddenTemplateFields(repeater, formModel, fieldData, lookupRegistry.extractors)
+      Fields.getHiddenTemplateFields(repeater, fieldData, lookupRegistry.extractors)
     val hiddenSnippets = Fields
       .toFormField(fieldDataUpd, hiddenTemplateFields)
       .map(formField => html.form.snippets.hidden_field(formField))
@@ -162,13 +162,14 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     maybeAccessCode: Option[AccessCode],
     form: Form,
     sectionNumber: SectionNumber,
-    fieldData: FormDataRecalculated,
+    formHandlerResult: FormHandlerResult,
+    //fieldData: FormDataRecalculated,
     formTemplate: FormTemplate,
-    errors: List[(FormComponent, FormFieldValidationResult)],
-    envelope: Envelope,
+    //errors: List[(FormComponent, FormFieldValidationResult)],
+    //envelope: Envelope,
     envelopeId: EnvelopeId,
-    validatedType: ValidatedType[ValidationResult],
-    formModel: FormModel[FullyExpanded],
+    //validatedType: ValidatedType[ValidationResult],
+    //formModel: FormModel[FullyExpanded],
     singleton: Singleton[FullyExpanded],
     formMaxAttachmentSizeMB: Int,
     contentTypes: List[ContentType],
@@ -177,12 +178,12 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     fastForward: FastForward
   )(implicit request: Request[_], messages: Messages, l: LangADT, sse: SmartStringEvaluator): Html = {
 
+    val FormHandlerResult(fieldData, errors, envelope, validatedType) = formHandlerResult
     //val page = formModel(sectionNumber)
     val formLevelHeading = shouldDisplayHeading(singleton, formTemplate.GFC579Ready.getOrElse("false"))
 
     val ei = ExtraInfo(
       singleton,
-      formModel,
       maybeAccessCode,
       sectionNumber,
       fieldData,
@@ -195,17 +196,17 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
       .updateFormData(formTemplate._id, maybeAccessCode, sectionNumber, fastForward)
     val listResult = errors.map { case (_, validationResult) => validationResult }
 
-    val javascript = JavascriptMaker.generateJs(sectionNumber, formModel, formTemplate)
+    val javascript = JavascriptMaker.generateJs(sectionNumber, fieldData.formModel, formTemplate)
 
     val (hiddenTemplateFields, fieldDataUpd) =
-      Fields.getHiddenTemplateFields(singleton, formModel, fieldData, lookupRegistry.extractors)
+      Fields.getHiddenTemplateFields(singleton, fieldData, lookupRegistry.extractors)
     val hiddenSnippets = Fields
       .toFormField(fieldDataUpd, hiddenTemplateFields)
       .map(formField => html.form.snippets.hidden_field(formField))
 
     val pageLevelErrorHtml = generatePageLevelErrorHtml(listResult, List.empty)
 
-    val originSection = Origin(formModel, fieldData).minSectionNumber
+    val originSection = Origin(fieldData).minSectionNumber
     val snippetsForFields = singleton.page.fields.map(formComponent =>
       htmlFor(formComponent, formTemplate._id, 0, ei, validatedType, formComponent.onlyShowOnSummary, obligations))
     val page = singleton.page
@@ -308,7 +309,6 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
 
     val ei = ExtraInfo(
       Singleton(decSection.page.asInstanceOf[Page[FullyExpanded]], decSection), // TODO Johow to expand Page??
-      FormModel(List.empty),
       maybeAccessCode,
       SectionNumber(0),
       fieldData,
@@ -393,7 +393,6 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     val ackSection = destinationList.acknowledgementSection.toSection
     val ei = ExtraInfo(
       Singleton(ackSection.page.asInstanceOf[Page[FullyExpanded]], ackSection),
-      FormModel(List.empty),
       maybeAccessCode,
       SectionNumber(0),
       FormDataRecalculated.empty,
@@ -461,7 +460,6 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     val enrSection = enrolmentSection.toSection
     val ei = ExtraInfo(
       Singleton(enrSection.page.asInstanceOf[Page[FullyExpanded]], enrSection),
-      FormModel(List.empty),
       maybeAccessCode,
       SectionNumber(0),
       fieldData,

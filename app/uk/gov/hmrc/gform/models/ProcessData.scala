@@ -33,11 +33,9 @@ import uk.gov.hmrc.gform.models.gform.ObligationsAction
 
 import scala.util.Try
 
-case class ProcessData(
-  data: FormDataRecalculated,
-  formModel: FormModel[FullyExpanded],
-  visitsIndex: VisitIndex,
-  obligations: Obligations)
+case class ProcessData(data: FormDataRecalculated, visitsIndex: VisitIndex, obligations: Obligations) {
+  val formModel: FormModel[FullyExpanded] = data.formModel
+}
 
 class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
 
@@ -63,14 +61,14 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
     for {
       browserRecalculated <- recalculateDataAndSections(dataRaw, cache)
       mongoRecalculated   <- recalculateDataAndSections(cache.variadicFormData, cache)
-      (data, formModel) = browserRecalculated
-      (oldData, mongoFormModel) = mongoRecalculated
+      data = browserRecalculated
+      mongoData = mongoRecalculated
       obligations <- new TaxPeriodStateChecker[F]().callDesIfNeeded(
                       getAllTaxPeriods,
                       hmrcTaxPeriodWithId(data.recData),
                       cache.form.thirdPartyData.obligations,
                       data.recData.recalculatedTaxPeriod,
-                      oldData.recData.recalculatedTaxPeriod,
+                      mongoData.recData.recalculatedTaxPeriod,
                       obligationsAction
                     )
 
@@ -82,15 +80,16 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
         obligations,
         FormDataRecalculated.clearTaxResponses)
 
-      val newVisitIndex = VisitIndex.updateSectionVisits(formModel, mongoFormModel, cache.form.visitsIndex)
+      val newVisitIndex =
+        VisitIndex.updateSectionVisits(data.formModel, mongoData.formModel, cache.form.visitsIndex)
 
-      ProcessData(dataUpd, formModel, VisitIndex(newVisitIndex), obligations)
+      ProcessData(dataUpd, VisitIndex(newVisitIndex), obligations)
     }
 
   def recalculateDataAndSections(data: VariadicFormData, cache: AuthCacheWithForm)(
     implicit hc: HeaderCarrier,
     me: MonadError[F, E]
-  ): F[(FormDataRecalculated, FormModel[FullyExpanded])] =
+  ): F[FormDataRecalculated] =
     for {
       formDataRecalculated <- recalculation
                                .recalculateFormData(
@@ -99,9 +98,6 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
                                  cache.retrievals,
                                  cache.form.thirdPartyData,
                                  cache.form.envelopeId)
-    } yield {
-      val formModel: FormModel[FullyExpanded] = FormModelBuilder.fromCache(cache).expand(formDataRecalculated)
-      (formDataRecalculated, formModel)
-    }
+    } yield formDataRecalculated
 
 }

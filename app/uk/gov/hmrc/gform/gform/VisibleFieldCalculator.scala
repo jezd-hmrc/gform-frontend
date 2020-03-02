@@ -66,7 +66,7 @@ object VisibleFieldCalculator {
      * }
      *
      * (visibleFields, Attachments(visibleFileUploads.flatten)) */
-    (???, ???)
+    (Seq.empty[FormField], Attachments.empty)
 }
 
 private class WithVisibleFileUploads(envelope: Envelope) {

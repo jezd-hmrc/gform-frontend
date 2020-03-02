@@ -51,7 +51,7 @@ package object handlers {
   type UpdateObligations[F[_]] = (FormId, UserData, Form, Form) => F[Unit]
 
   type RecalculateDataAndSections[F[_]] =
-    (VariadicFormData, AuthCacheWithForm) => F[(FormDataRecalculated, FormModel[FullyExpanded])]
+    (VariadicFormData, AuthCacheWithForm) => F[FormDataRecalculated]
 
   type ValidateForm[F[_]] = (
     FormDataRecalculated,

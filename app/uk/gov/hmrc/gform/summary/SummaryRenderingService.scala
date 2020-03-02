@@ -147,20 +147,11 @@ class SummaryRenderingService(
     import i18nSupport._
 
     for {
-      data <- recalculation
-               .recalculateFormData(
-                 dataRaw,
-                 cache.formTemplate,
-                 cache.retrievals,
-                 cache.form.thirdPartyData,
-                 cache.form.envelopeId)
-      envelope <- envelopeF
-      formModel = FormModelBuilder.fromCache(cache).expand(data)
-      (v, _) <- validationService.validateForm(formModel, cache, envelope, cache.retrievals)
+      envelope     <- envelopeF
+      (data, v, _) <- validationService.validateForm(cache, envelope)
     } yield
       SummaryRenderingService.renderSummary(
         cache.formTemplate,
-        formModel,
         v,
         data,
         maybeAccessCode,
@@ -178,7 +169,6 @@ class SummaryRenderingService(
 object SummaryRenderingService {
   def renderSummary(
     formTemplate: FormTemplate,
-    formModel: FormModel[FullyExpanded],
     validatedType: ValidatedType[ValidationResult],
     formFields: FormDataRecalculated,
     maybeAccessCode: Option[AccessCode],
@@ -201,7 +191,6 @@ object SummaryRenderingService {
         formFields,
         maybeAccessCode,
         formTemplate,
-        formModel,
         envelope,
         obligations,
         summaryPagePurpose,
@@ -225,7 +214,6 @@ object SummaryRenderingService {
     data: FormDataRecalculated,
     maybeAccessCode: Option[AccessCode],
     formTemplate: FormTemplate,
-    formModel: FormModel[FullyExpanded],
     envelope: Envelope,
     obligations: Obligations,
     summaryPagePurpose: SummaryPagePurpose,
@@ -237,6 +225,8 @@ object SummaryRenderingService {
     viewHelpers: ViewHelpersAlgebra,
     lise: SmartStringEvaluator
   ): List[Html] = {
+
+    val formModel = data.formModel
 
     def renderHtmls(singleton: Singleton[FullyExpanded], sectionNumber: SectionNumber)(
       implicit l: LangADT): List[Html] = {

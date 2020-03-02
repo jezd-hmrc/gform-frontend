@@ -39,7 +39,6 @@ class FormControllerRequestHandler(formValidator: FormValidator)(implicit ec: Ex
     envelope: Envelope,
     retrievals: MaterialisedRetrievals,
     data: FormDataRecalculated,
-    formModel: FormModel[FullyExpanded],
     validateFormComponents: ValidateFormComponents[Future],
     evaluateValidation: EvaluateValidation
   )(implicit hc: HeaderCarrier)
@@ -50,7 +49,6 @@ class FormControllerRequestHandler(formValidator: FormValidator)(implicit ec: Ex
       case SeNo =>
         handleValidate(
           data,
-          formModel,
           sectionNumber,
           cache.form.envelopeId,
           envelope,
@@ -74,7 +72,7 @@ class FormControllerRequestHandler(formValidator: FormValidator)(implicit ec: Ex
     val retrievals = cache.retrievals
 
     for {
-      (data, formModel) <- recalculateDataAndSections(cache.variadicFormData, cache)
+      data <- recalculateDataAndSections(cache.variadicFormData, cache)
       (errors, validate, envelope) <- handleSuppressErrors(
                                        sectionNumber,
                                        suppressErrors,
@@ -82,16 +80,14 @@ class FormControllerRequestHandler(formValidator: FormValidator)(implicit ec: Ex
                                        envelope,
                                        retrievals,
                                        data,
-                                       formModel,
                                        validateFormComponents,
                                        evaluateValidation
                                      )
-    } yield FormHandlerResult(data, errors, envelope, validate, formModel)
+    } yield FormHandlerResult(data, errors, envelope, validate)
   }
 
   def handleFormValidation(
     data: FormDataRecalculated,
-    formModel: FormModel[FullyExpanded],
     sn: SectionNumber,
     cache: AuthCacheWithForm,
     envelope: Envelope,
@@ -103,15 +99,8 @@ class FormControllerRequestHandler(formValidator: FormValidator)(implicit ec: Ex
   )(
     implicit hc: HeaderCarrier
   ): Future[FormValidationOutcome] =
-    formValidator.validateForm(
-      data,
-      formModel,
-      sn,
-      cache,
-      envelope,
-      extractedValidateFormHelper,
-      validateFormComponents,
-      evaluateValidation)
+    formValidator
+      .validateForm(data, sn, cache, envelope, extractedValidateFormHelper, validateFormComponents, evaluateValidation)
 
   def handleFastForwardValidate(
     processData: ProcessData,
@@ -138,7 +127,6 @@ class FormControllerRequestHandler(formValidator: FormValidator)(implicit ec: Ex
 
   def handleValidate(
     formDataRecalculated: FormDataRecalculated,
-    formModel: FormModel[FullyExpanded],
     sectionNumber: SectionNumber,
     envelopeId: EnvelopeId,
     envelope: Envelope,
@@ -151,7 +139,6 @@ class FormControllerRequestHandler(formValidator: FormValidator)(implicit ec: Ex
   ): Future[(List[(FormComponent, FormFieldValidationResult)], ValidatedType[ValidationResult], Envelope)] =
     formValidator.validate(
       formDataRecalculated,
-      formModel,
       sectionNumber,
       envelopeId,
       envelope,
@@ -166,5 +153,5 @@ case class FormHandlerResult(
   data: FormDataRecalculated,
   result: List[(FormComponent, FormFieldValidationResult)],
   envelope: Envelope,
-  validatedType: ValidatedType[ValidationResult],
-  formModel: FormModel[FullyExpanded])
+  validatedType: ValidatedType[ValidationResult]
+)

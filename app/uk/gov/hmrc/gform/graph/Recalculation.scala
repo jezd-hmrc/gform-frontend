@@ -120,13 +120,13 @@ class Recalculation[F[_]: Monad, E](
 
     val depg = DependencyGraph.constructDependencyGraph(graph)
 
-    println("DEP_G: " + (depg))
-
-    depg match {
-      case Right(xs) => xs.foreach(println)
-      case Left(error) =>
-        println("ERROR: " + error)
-    }
+    /* println("DEP_G: " + (depg))
+     *
+     * depg match {
+     *   case Right(xs) => xs.foreach(println)
+     *   case Left(error) =>
+     *     println("ERROR: " + error)
+     * } */
 
     val fcLookup_ = formModel.allFormComponents.map(fc => fc.id -> fc).toMap
 
