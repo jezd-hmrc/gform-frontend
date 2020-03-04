@@ -39,7 +39,7 @@ import uk.gov.hmrc.gform.gformbackend.GformConnector
 import uk.gov.hmrc.gform.graph.CustomerIdRecalculation
 import uk.gov.hmrc.gform.lookup.LookupRegistry
 import uk.gov.hmrc.gform.models.FormModel
-import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, AffinityGroupUtil, LangADT, PdfHtml, SubmissionData }
+import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, AffinityGroupUtil, LangADT, PdfHtml, SourceOrigin, SubmissionData }
 import uk.gov.hmrc.gform.sharedmodel.form.Form
 import uk.gov.hmrc.gform.sharedmodel.form.FormId
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ EmailParametersRecalculated, FormTemplate, FormTemplateId, FullyExpanded }
@@ -116,7 +116,7 @@ class TestOnlyController(
   private def fetchHandlebarPayload(
     form: Form,
     formTemplate: FormTemplate,
-    formModel: FormModel[FullyExpanded],
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current],
     customerId: CustomerId,
     destinationId: DestinationId,
     retrievals: MaterialisedRetrievals

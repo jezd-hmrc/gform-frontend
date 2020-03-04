@@ -27,7 +27,7 @@ import uk.gov.hmrc.gform.fileupload.{ Envelope, Error, File, Infected }
 import uk.gov.hmrc.gform.lookup.LookupRegistry
 import uk.gov.hmrc.gform.models.{ FormModel }
 import uk.gov.hmrc.gform.models.email.{ EmailFieldId, VerificationCodeFieldId, verificationCodeFieldId }
-import uk.gov.hmrc.gform.sharedmodel.{ LangADT, SmartString, SubmissionRef }
+import uk.gov.hmrc.gform.sharedmodel.{ LangADT, SmartString, SourceOrigin, SubmissionRef }
 import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, FileId, FormDataRecalculated, ThirdPartyData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.gform.eval.smartstring._
@@ -44,7 +44,7 @@ class EmailCodeFieldMatcher(
   }
 }
 
-class GetEmailCodeFieldMatcher(formModel: FormModel[FullyExpanded]) {
+class GetEmailCodeFieldMatcher(formModel: FormModel[FullyExpanded, SourceOrigin.Current]) {
   def apply(fc: FormComponent): EmailCodeFieldMatcher = {
     val fcIds: Map[VerificationCodeFieldId, EmailFieldId] = formModel.allFormComponents.collect {
       case IsEmailVerifier(emailFcId, emailVerifiedBy) =>
@@ -55,8 +55,8 @@ class GetEmailCodeFieldMatcher(formModel: FormModel[FullyExpanded]) {
 }
 
 object GetEmailCodeFieldMatcher {
-  def apply(formModel: FormModel[FullyExpanded]) = new GetEmailCodeFieldMatcher(formModel)
-  val noop = new GetEmailCodeFieldMatcher(FormModel.empty[FullyExpanded])
+  def apply(formModel: FormModel[FullyExpanded, SourceOrigin.Current]) = new GetEmailCodeFieldMatcher(formModel)
+  val noop = new GetEmailCodeFieldMatcher(FormModel.empty[FullyExpanded, SourceOrigin.Current])
 }
 
 class ComponentsValidator(

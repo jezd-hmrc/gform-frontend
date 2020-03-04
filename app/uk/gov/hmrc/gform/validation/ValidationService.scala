@@ -32,7 +32,7 @@ import uk.gov.hmrc.gform.models.ExpandUtils.submittedFCs
 import uk.gov.hmrc.gform.models.{ FormModel, PageModel, Repeater, Singleton }
 import uk.gov.hmrc.gform.models.email.EmailFieldId
 import uk.gov.hmrc.gform.models.helpers.Fields
-import uk.gov.hmrc.gform.sharedmodel.EmailVerifierService
+import uk.gov.hmrc.gform.sharedmodel.{ EmailVerifierService, SourceOrigin }
 import uk.gov.hmrc.gform.sharedmodel.des.{ DesRegistrationRequest, DesRegistrationResponse, InternationalAddress, UkAddress }
 import uk.gov.hmrc.gform.sharedmodel.email.ConfirmationCodeWithEmailService
 import uk.gov.hmrc.gform.sharedmodel.form.{ Validated => _, _ }
@@ -290,7 +290,9 @@ class ValidationService(
 
     val dataRaw = cache.variadicFormData
 
-    def filterPages(formModel: FormModel[FullyExpanded], data: FormDataRecalculated): FormModel[FullyExpanded] =
+    def filterPages(
+      formModel: FormModel[FullyExpanded, SourceOrigin.Current],
+      data: FormDataRecalculated): FormModel[FullyExpanded, SourceOrigin.Current] =
       FormModel(formModel.pages.filter(data.isVisible))
 
     for {

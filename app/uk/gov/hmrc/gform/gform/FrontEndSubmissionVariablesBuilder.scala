@@ -19,7 +19,7 @@ import play.api.libs.json.{ JsValue, Json }
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.graph.processor.IdentifierExtractor
 import uk.gov.hmrc.gform.models.FormModel
-import uk.gov.hmrc.gform.sharedmodel.FrontEndSubmissionVariables
+import uk.gov.hmrc.gform.sharedmodel.{ FrontEndSubmissionVariables, SourceOrigin }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 
 object FrontEndSubmissionVariablesBuilder extends IdentifierExtractor {
@@ -27,7 +27,7 @@ object FrontEndSubmissionVariablesBuilder extends IdentifierExtractor {
   def apply(
     retrievals: MaterialisedRetrievals,
     formTemplate: FormTemplate,
-    formModel: FormModel[FullyExpanded],
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current],
     customerId: CustomerId
   ): FrontEndSubmissionVariables = {
 

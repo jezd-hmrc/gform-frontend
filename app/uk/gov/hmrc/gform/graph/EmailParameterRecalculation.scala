@@ -15,6 +15,7 @@
  */
 
 package uk.gov.hmrc.gform.graph
+
 import cats.MonadError
 import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.sharedmodel.{ LangADT, LocalisedString, SmartString }

@@ -92,7 +92,7 @@ class SectionRenderingServiceSpec extends Spec with FormModelSupport {
 
   "SectionRenderingService" should "generate first page" in {
 
-    val formModel: FormModel[FullyExpanded] = mkFormModel(allSections)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(allSections)
     val singleton: Singleton[FullyExpanded] = ???
 
     val generatedHtml = testService
@@ -141,7 +141,7 @@ class SectionRenderingServiceSpec extends Spec with FormModelSupport {
   }
 
   "SectionRenderingService" should "set a field to hidden if is onlyShowOnSummary is set to true" in {
-    val formModel: FormModel[FullyExpanded] =
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] =
       mkFormModel(allSections.map(sc => sc.updateFields(sc.page.fields.map(f => f.copy(onlyShowOnSummary = true)))))
     val singleton: Singleton[FullyExpanded] = ???
     val generatedHtml = testService
@@ -191,7 +191,7 @@ class SectionRenderingServiceSpec extends Spec with FormModelSupport {
     visibleFields should be(List())
   }
   "SectionRenderingService" should "add in progress indicator if it is defined" in {
-    val formModel: FormModel[FullyExpanded] =
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] =
       mkFormModel(List(allSections.head.updateProgressIndicator(Some(toSmartString("Progress Indicator")))))
     val singleton: Singleton[FullyExpanded] = ???
     val generatedHtml = testService
@@ -221,7 +221,7 @@ class SectionRenderingServiceSpec extends Spec with FormModelSupport {
   }
 
   it should "generate second page" in {
-    val formModel: FormModel[FullyExpanded] = mkFormModel(allSections)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(allSections)
     val singleton: Singleton[FullyExpanded] = ???
     val generatedHtml = testService
       .renderSection(
@@ -323,7 +323,7 @@ class SectionRenderingServiceSpec extends Spec with FormModelSupport {
       `section - about you`
     )
 
-    val formModel: FormModel[FullyExpanded] = mkFormModel(allSections)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(allSections)
     val singleton: Singleton[FullyExpanded] = ???
 
     val generatedHtml = testService
@@ -381,7 +381,7 @@ class SectionRenderingServiceSpec extends Spec with FormModelSupport {
       `section - group`
     )
 
-    val formModel: FormModel[FullyExpanded] = mkFormModel(allSections)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(allSections)
     val singleton: Singleton[FullyExpanded] = ???
 
     val generatedHtml = testService
@@ -432,7 +432,7 @@ class SectionRenderingServiceSpec extends Spec with FormModelSupport {
       `section - group`
     )
 
-    val formModel: FormModel[FullyExpanded] = mkFormModel(allSections)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(allSections)
     val singleton: Singleton[FullyExpanded] = ???
 
     val generatedHtml = thisTestService

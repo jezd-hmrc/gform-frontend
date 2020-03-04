@@ -17,40 +17,8 @@
 package uk.gov.hmrc.gform.sharedmodel.form
 
 import cats.Semigroup
-import cats.syntax.eq._
-import com.softwaremill.quicklens._
 import play.api.libs.json._
-import uk.gov.hmrc.gform.models.{ FormModel, PageModel }
-import uk.gov.hmrc.gform.graph.RecData
-import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponentId, FullyExpanded, PageMode, Section }
-import uk.gov.hmrc.gform.sharedmodel.graph.{ GraphNode, IncludeIfGN, SimpleGN }
-
-case class FormDataRecalculated(invisible: Set[GraphNode], recData: RecData, formModel: FormModel[FullyExpanded]) {
-
-  val data: VariadicFormData = recData.data // ToDo JoVl Rename to recalculatedData
-
-  def isVisible[A <: PageMode](pageModel: PageModel[A]): Boolean =
-    !invisible.exists {
-      case SimpleGN(_)               => false
-      case IncludeIfGN(_, includeIf) => pageModel.fold(_.page.includeIf)(_.includeIf).exists(_ === includeIf)
-    }
-
-  /* def isVisibleFormModel(section: FormModel[FullyExpanded]): Boolean =
- *   !invisible.exists {
- *     case SimpleGN(_)               => false
- *     case IncludeIfGN(_, includeIf) => section.includeIf.exists(_ === includeIf)
- *   } */
-}
-
-object FormDataRecalculated {
-  val empty = FormDataRecalculated(Set.empty, RecData.empty, FormModel.empty)
-
-  def clearTaxResponses(data: FormDataRecalculated): FormDataRecalculated =
-    data
-      .modify(_.recData.data)
-      .setTo(data.recData.cleared)
-}
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.FormComponentId
 
 case class FormData(fields: Seq[FormField]) {
   lazy val toData: Map[FormComponentId, String] = fields.map(x => x.id -> x.value).toMap

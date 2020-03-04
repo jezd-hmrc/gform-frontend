@@ -25,7 +25,8 @@ import uk.gov.hmrc.gform.commons.ExprFormat
 import uk.gov.hmrc.gform.commons.FormatType
 import uk.gov.hmrc.gform.commons.FormatType.{ Default, FromText }
 import uk.gov.hmrc.gform.graph.Evaluator
-import uk.gov.hmrc.gform.models.FormModel
+import uk.gov.hmrc.gform.models.{ FormModel, FormModelVisibilityOptics }
+import uk.gov.hmrc.gform.sharedmodel.SourceOrigin
 import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, Form, FormDataRecalculated, ThirdPartyData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Expr, FormComponentId, FormTemplate, FullyExpanded }
 import uk.gov.hmrc.gform.sharedmodel.{ LangADT, SmartString }
@@ -34,13 +35,13 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 trait SmartStringEvaluatorFactory {
   def apply(
-    recalculatedFormData: FormDataRecalculated,
+    formModelVisibilityOptics: FormModelVisibilityOptics,
     retrievals: MaterialisedRetrievals,
     form: Form,
     formTemplate: FormTemplate)(implicit l: LangADT, hc: HeaderCarrier): SmartStringEvaluator
 
   def apply(
-    recalculatedFormData: FormDataRecalculated,
+    formModelVisibilityOptics: FormModelVisibilityOptics,
     retrievals: MaterialisedRetrievals,
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId,
@@ -53,7 +54,7 @@ class RealSmartStringEvaluatorFactory(evaluator: Evaluator[Id]) extends SmartStr
     List("""\""", "/", "`", "*", "_", "{", "}", "[", "]", "(", ")", "#", "+", "-", ".", "!")
 
   def apply(
-    recalculatedFormData: FormDataRecalculated,
+    formModelVisibilityOptics: FormModelVisibilityOptics,
     retrievals: MaterialisedRetrievals,
     form: Form,
     formTemplate: FormTemplate
@@ -65,7 +66,7 @@ class RealSmartStringEvaluatorFactory(evaluator: Evaluator[Id]) extends SmartStr
     apply(recalculatedFormData, retrievals, form.thirdPartyData, form.envelopeId, formTemplate)
 
   def apply(
-    recalculatedFormData: FormDataRecalculated,
+    formModelVisibilityOptics: FormModelVisibilityOptics,
     retrievals: MaterialisedRetrievals,
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId,

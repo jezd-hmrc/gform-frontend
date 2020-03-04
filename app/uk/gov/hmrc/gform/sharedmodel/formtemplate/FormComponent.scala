@@ -26,7 +26,7 @@ import uk.gov.hmrc.gform.gform.FormComponentUpdater
 import uk.gov.hmrc.gform.models.ExpandUtils._
 import uk.gov.hmrc.gform.models.email.{ EmailFieldId, VerificationCodeFieldId, emailFieldId, verificationCodeFieldId }
 import uk.gov.hmrc.gform.models.javascript.{ FormComponentSimple, FormComponentWithGroup, JsFormComponentModel, JsFormComponentWithCtx, JsRevealingChoiceModel }
-import uk.gov.hmrc.gform.sharedmodel.{ LabelHelper, SmartString, VariadicFormData }
+import uk.gov.hmrc.gform.sharedmodel.{ LabelHelper, SmartString, SourceOrigin, VariadicFormData }
 
 case class ExpandedFormComponent(formComponents: List[FormComponent]) extends AnyVal {
   // ToDo Lance - Shouldn't we be recursing into Group and RevealingChoice
@@ -92,7 +92,7 @@ case class FormComponent(
     ).updated
   }
 
-  private val expandGroup: VariadicFormData => Group => Int => List[FormComponent] = data =>
+  def expandGroup[S <: SourceOrigin](data: VariadicFormData[S]): Group => Int => List[FormComponent] =
     group =>
       index => {
         val ids: List[FormComponentId] = groupIndex(index + 1, group)
@@ -100,15 +100,15 @@ case class FormComponent(
         if (index === 0 || toExpand) {
           group.fields.map(addFieldIndex(_, index, group))
         } else Nil
-  }
+    }
 
   private val expandRevealingChoice: RevealingChoice => List[FormComponent] =
     _.options.toList.flatMap(_.revealingFields)
 
-  private def expandByDataRc(fc: FormComponent, data: VariadicFormData): List[FormComponent] =
+  private def expandByDataRc[S <: SourceOrigin](fc: FormComponent, data: VariadicFormData[S]): List[FormComponent] =
     expand(fc, expandGroup(data), RevealingChoice.slice(fc.id)(data))
 
-  private def expandByData(fc: FormComponent, data: VariadicFormData): List[FormComponent] =
+  private def expandByData[S <: SourceOrigin](fc: FormComponent, data: VariadicFormData[S]): List[FormComponent] =
     expand(fc, expandGroup(data), expandRevealingChoice)
 
   private def expandAll(fc: FormComponent): List[FormComponent] =
@@ -138,9 +138,9 @@ case class FormComponent(
       case _ => JsFormComponentWithCtx(FormComponentSimple(fc)) :: Nil
     }
 
-  def expandFormComponent(data: VariadicFormData): ExpandedFormComponent =
+  def expandFormComponent[S <: SourceOrigin](data: VariadicFormData[S]): ExpandedFormComponent =
     ExpandedFormComponent(expandByData(this, data))
-  def expandFormComponentRc(data: VariadicFormData): ExpandedFormComponent =
+  def expandFormComponentRc[S <: SourceOrigin](data: VariadicFormData[S]): ExpandedFormComponent =
     ExpandedFormComponent(expandByDataRc(this, data))
 
   val expandFormComponentFull: ExpandedFormComponent = ExpandedFormComponent(expandAll(this))

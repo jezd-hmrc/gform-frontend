@@ -38,7 +38,7 @@ object RepeatingComponentService {
    *   fcIds.map(id => data.data.one(id).fold(0: BigDecimal)(toBigDecimalDefault)).sum
    * } */
 
-  /* def formModel(formTemplate: FormTemplate, data: FormDataRecalculated): FormModel[FullyExpanded] =
+  /* def formModel(formTemplate: FormTemplate, data: FormDataRecalculated): FormModel[FullyExpanded, SourceOrigin.Current] =
    *   FormModel {
    *     formTemplate.sections
    *       .flatMap {

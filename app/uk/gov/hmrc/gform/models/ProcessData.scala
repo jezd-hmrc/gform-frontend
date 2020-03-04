@@ -34,7 +34,7 @@ import uk.gov.hmrc.gform.models.gform.ObligationsAction
 import scala.util.Try
 
 case class ProcessData(data: FormDataRecalculated, visitsIndex: VisitIndex, obligations: Obligations) {
-  val formModel: FormModel[FullyExpanded] = data.formModel
+  val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = data.formModel
 }
 
 class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
@@ -49,7 +49,7 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
     }
 
   def getProcessData(
-    dataRaw: VariadicFormData,
+    dataRaw: VariadicFormData[SourceOrigin.OutOfDate],
     cache: AuthCacheWithForm,
     getAllTaxPeriods: NonEmptyList[HmrcTaxPeriodWithEvaluatedId] => F[NonEmptyList[TaxResponse]],
     obligationsAction: ObligationsAction
@@ -86,7 +86,7 @@ class ProcessDataService[F[_]: Monad, E](recalculation: Recalculation[F, E]) {
       ProcessData(dataUpd, VisitIndex(newVisitIndex), obligations)
     }
 
-  def recalculateDataAndSections(data: VariadicFormData, cache: AuthCacheWithForm)(
+  def recalculateDataAndSections(data: VariadicFormData[SourceOrigin.OutOfDate], cache: AuthCacheWithForm)(
     implicit hc: HeaderCarrier,
     me: MonadError[F, E]
   ): F[FormDataRecalculated] =

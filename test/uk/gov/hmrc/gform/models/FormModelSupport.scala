@@ -43,7 +43,7 @@ trait FormModelSupport {
     getSingleton(section, FormDataRecalculated.empty)
 
   def getSingleton(section: Section.NonRepeatingPage, data: FormDataRecalculated): Singleton[FullyExpanded] = {
-    val formModel: FormModel[FullyExpanded] = mkFormModel(List(section), data)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(List(section), data)
     val singletons: Option[Singleton[FullyExpanded]] = formModel.pages.collectFirst {
       case s: Singleton[_] => s
     }
@@ -65,18 +65,18 @@ trait FormModelSupport {
     mkFormModelBuilder(formTemplate).basic()
   }
 
-  def mkFormModel(sections: List[Section]): FormModel[FullyExpanded] =
+  def mkFormModel(sections: List[Section]): FormModel[FullyExpanded, SourceOrigin.Current] =
     mkFormModel(sections, FormDataRecalculated.empty)
 
-  def mkFormModel(sections: List[Section], data: FormDataRecalculated): FormModel[FullyExpanded] = {
+  def mkFormModel(sections: List[Section], data: FormDataRecalculated): FormModel[FullyExpanded, SourceOrigin.Current] = {
     val formTemplate: FormTemplate = mkFormTemplate(sections)
     mkFormModel(formTemplate, data)
   }
 
-  def mkFormModel(formTemplate: FormTemplate): FormModel[FullyExpanded] =
+  def mkFormModel(formTemplate: FormTemplate): FormModel[FullyExpanded, SourceOrigin.Current] =
     mkFormModel(formTemplate, FormDataRecalculated.empty)
 
-  def mkFormModel(formTemplate: FormTemplate, data: FormDataRecalculated): FormModel[FullyExpanded] =
+  def mkFormModel(formTemplate: FormTemplate, data: FormDataRecalculated): FormModel[FullyExpanded, SourceOrigin.Current] =
     mkFormModelBuilder(formTemplate).expand(data)
 
 }

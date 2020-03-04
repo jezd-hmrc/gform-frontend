@@ -72,7 +72,7 @@ class NavitagionSpec extends Spec with GraphSpec with FormModelSupport {
       EnvelopeId("")
     )
     new Navigation {
-      val formModel: FormModel[FullyExpanded] = mkFormModel(sectionsData)
+      val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(sectionsData)
       val data: FormDataRecalculated = res.get
     }.availableSectionNumbers
   }

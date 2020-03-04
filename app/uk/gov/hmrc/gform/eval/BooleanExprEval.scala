@@ -26,7 +26,7 @@ import scala.language.higherKinds
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.graph.{ Convertible, Evaluator, NewValue }
 import uk.gov.hmrc.gform.models.FormModel
-import uk.gov.hmrc.gform.sharedmodel.{ VariadicFormData, VariadicValue }
+import uk.gov.hmrc.gform.sharedmodel.{ SourceOrigin, VariadicFormData, VariadicValue }
 import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, ThirdPartyData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ And, BooleanExpr, Contains, Equals, Expr, FormComponentId, FormCtx, FormTemplate, FullyExpanded, GreaterThan, GreaterThanOrEquals, IsFalse, IsTrue, LessThan, LessThanOrEquals, Not, NotEquals, Or }
 import uk.gov.hmrc.gform.sharedmodel.graph.GraphNode
@@ -37,13 +37,13 @@ class BooleanExprEval[F[_]: Monad](
 ) {
   def isTrue(
     expr: BooleanExpr,
-    data: VariadicFormData,
+    data: VariadicFormData[SourceOrigin.OutOfDate],
     retrievals: MaterialisedRetrievals,
     visSet: Set[GraphNode],
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId,
     formTemplate: FormTemplate,
-    formModel: FormModel[FullyExpanded])(implicit hc: HeaderCarrier): F[Boolean] = {
+    formModel: FormModel[FullyExpanded, SourceOrigin.OutOfDate])(implicit hc: HeaderCarrier): F[Boolean] = {
 
     def loop(expr: BooleanExpr): F[Boolean] =
       isTrue(expr, data, retrievals, visSet, thirdPartyData, envelopeId, formTemplate, formModel)

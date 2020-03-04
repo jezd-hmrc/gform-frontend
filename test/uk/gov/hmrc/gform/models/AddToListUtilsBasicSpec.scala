@@ -118,7 +118,7 @@ class AddToListUtilsBacisSpec
     )
 
     forAll(variations) { (index, startingData, expectedData) ⇒
-      val formModel: FormModel[FullyExpanded] = mkFormModel(sections, startingData)
+      val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(sections, startingData)
       val processData: ProcessData = ProcessData(startingData, formModel, visitsIndex, obligations)
       val res = AddToListUtils.removeRecord(processData, index, addToListId)
 

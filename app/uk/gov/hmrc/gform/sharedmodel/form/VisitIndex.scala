@@ -21,6 +21,7 @@ import cats.syntax.eq._
 import play.api.libs.json.{ Json, OFormat }
 import scala.util.Try
 import uk.gov.hmrc.gform.models.FormModel
+import uk.gov.hmrc.gform.sharedmodel.SourceOrigin
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FullyExpanded, SectionNumber }
 
 case class VisitIndex(visitsIndex: Set[Int]) extends AnyVal {
@@ -31,8 +32,8 @@ case class VisitIndex(visitsIndex: Set[Int]) extends AnyVal {
 object VisitIndex {
 
   def updateSectionVisits(
-    formModel: FormModel[FullyExpanded],
-    mongoFormModel: FormModel[FullyExpanded],
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current],
+    mongoFormModel: FormModel[FullyExpanded, SourceOrigin.Current],
     visitsIndex: VisitIndex
   ): Set[Int] =
     visitsIndex.visitsIndex

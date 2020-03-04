@@ -66,39 +66,47 @@ object VariadicValue {
   }
 }
 
-case class VariadicFormData(data: Map[FormComponentId, VariadicValue]) {
+sealed trait SourceOrigin extends Product with Serializable
+
+object SourceOrigin {
+  trait OutOfDate extends SourceOrigin
+//  trait Mongo extends SourceOrigin
+  trait Current extends SourceOrigin
+}
+
+case class VariadicFormData[S <: SourceOrigin](data: Map[FormComponentId, VariadicValue]) {
   def get(id: FormComponentId): Option[VariadicValue] = data.get(id)
 
   def keySet(): Set[FormComponentId] = data.keySet
 
-  def ++(addend: VariadicFormData): VariadicFormData = VariadicFormData(data ++ addend.data)
-  def addValue(entry: (FormComponentId, VariadicValue)): VariadicFormData = VariadicFormData(data + entry)
-  def addOne(entry: (FormComponentId, String)): VariadicFormData =
+  def ++(addend: VariadicFormData[S]): VariadicFormData[S] = VariadicFormData[S](data ++ addend.data)
+  def addValue(entry: (FormComponentId, VariadicValue)): VariadicFormData[S] = VariadicFormData[S](data + entry)
+  def addOne(entry: (FormComponentId, String)): VariadicFormData[S] =
     this addValue (entry._1 -> VariadicValue.One(entry._2))
-  def addMany(entry: (FormComponentId, Seq[String])): VariadicFormData =
+  def addMany(entry: (FormComponentId, Seq[String])): VariadicFormData[S] =
     this addValue (entry._1 -> VariadicValue.Many(entry._2))
 
-  def -(remove: FormComponentId): VariadicFormData = --(Set(remove))
+  def -(remove: FormComponentId): VariadicFormData[S] = --(Set(remove))
 
-  def --(remove: VariadicFormData): VariadicFormData = --(remove.keySet)
+  def --(remove: VariadicFormData[S]): VariadicFormData[S] = --(remove.keySet)
 
-  def --(formComponents: GenTraversableOnce[FormComponentId]): VariadicFormData =
-    VariadicFormData(data -- formComponents)
+  def --(formComponents: GenTraversableOnce[FormComponentId]): VariadicFormData[S] =
+    VariadicFormData[S](data -- formComponents)
 
-  def subset(ids: Set[FormComponentId]): VariadicFormData =
-    VariadicFormData(data.filter { case (k, _) => ids.contains(k) })
+  def subset(ids: Set[FormComponentId]): VariadicFormData[S] =
+    VariadicFormData[S](data.filter { case (k, _) => ids.contains(k) })
 
   def collect[B](pf: PartialFunction[(FormComponentId, VariadicValue), B]): Iterable[B] = data.collect(pf)
 
   def contains(id: FormComponentId): Boolean = data.contains(id)
 
-  def mapKeys(f: FormComponentId => FormComponentId): VariadicFormData =
-    VariadicFormData(data.map {
+  def mapKeys(f: FormComponentId => FormComponentId): VariadicFormData[S] =
+    VariadicFormData[S](data.map {
       case (k, v) => (f(k), v)
     })
 
-  def mapValues(f: (FormComponentId, VariadicValue) => VariadicValue): VariadicFormData =
-    VariadicFormData(data.map {
+  def mapValues(f: (FormComponentId, VariadicValue) => VariadicValue): VariadicFormData[S] =
+    VariadicFormData[S](data.map {
       case (k, v) => (k, f(k, v))
     })
 
@@ -124,46 +132,48 @@ case class VariadicFormData(data: Map[FormComponentId, VariadicValue]) {
 }
 
 object VariadicFormData {
-  val empty: VariadicFormData = VariadicFormData(Map.empty)
+  def empty[S <: SourceOrigin]: VariadicFormData[S] = VariadicFormData(Map.empty)
 
-  def create(idAndValue: (FormComponentId, VariadicValue)*): VariadicFormData =
-    VariadicFormData(idAndValue.toMap)
+  def create[S <: SourceOrigin](idAndValue: (FormComponentId, VariadicValue)*): VariadicFormData[S] =
+    VariadicFormData[S](idAndValue.toMap)
 
-  def one(formComponentId: FormComponentId, value: String): VariadicFormData =
-    VariadicFormData(Map(formComponentId -> VariadicValue.One(value)))
+  def one[S <: SourceOrigin](formComponentId: FormComponentId, value: String): VariadicFormData[S] =
+    VariadicFormData[S](Map(formComponentId -> VariadicValue.One(value)))
 
-  def ones(idAndValue: (FormComponentId, String)*): VariadicFormData =
+  def ones[S <: SourceOrigin](idAndValue: (FormComponentId, String)*): VariadicFormData[S] =
     idAndValue.toList.foldMap { case (id, value) => one(id, value) }
 
-  def many(formComponentId: FormComponentId, value: Seq[String]): VariadicFormData =
-    VariadicFormData(Map(formComponentId -> VariadicValue.Many(value)))
+  def many[S <: SourceOrigin](formComponentId: FormComponentId, value: Seq[String]): VariadicFormData[S] =
+    VariadicFormData[S](Map(formComponentId -> VariadicValue.Many(value)))
 
-  def manys(idAndValue: (FormComponentId, Seq[String])*): VariadicFormData =
+  def manys[S <: SourceOrigin](idAndValue: (FormComponentId, Seq[String])*): VariadicFormData[S] =
     idAndValue.toList.foldMap { case (id, value) => many(id, value) }
 
-  implicit val monoid: Monoid[VariadicFormData] = new Monoid[VariadicFormData] {
-    override def empty: VariadicFormData = VariadicFormData.empty
+  implicit def monoid[S <: SourceOrigin]: Monoid[VariadicFormData[S]] = new Monoid[VariadicFormData[S]] {
+    override def empty: VariadicFormData[S] = VariadicFormData.empty
 
-    override def combine(x: VariadicFormData, y: VariadicFormData): VariadicFormData = x ++ y
+    override def combine(x: VariadicFormData[S], y: VariadicFormData[S]): VariadicFormData[S] = x ++ y
   }
 
-  // The VariadicFormData instance returned contains ALL fields in the data map, even if
+  // The VariadicFormData[S] instance returned contains ALL fields in the data map, even if
   // there is no corresponding FormComponentId in the template.
   // The only use of the FormTemplate is to determine which branch of VariadicValue each FormComponentId should use,
   // with the assumption that a value of any FormComponentId found in the data map that is not
   // in the template should be represented by a VariadicValue.One value.
-  def buildFromMongoData(template: FormTemplate, data: Map[FormComponentId, String]): VariadicFormData =
+  def buildFromMongoData[S <: SourceOrigin](
+    template: FormTemplate,
+    data: Map[FormComponentId, String]): VariadicFormData[S] =
     buildFromMongoData(listVariadicFormComponentIds(template), data)
 
-  // The VariadicFormData instance returned contains ALL fields in the data map, even if
+  // The VariadicFormData[S] instance returned contains ALL fields in the data map, even if
   // there is no corresponding FormComponentId in the given set of form components Ids.
   // The only use of formComponentsIds set is to determine which branch of VariadicValue each FormComponentId should use,
   // with the assumption that a value of any FormComponentId found in the data map that is not
   // in the formComponentIds set should be represented by a VariadicValue.One value.
-  def buildFromMongoData(
+  def buildFromMongoData[S <: SourceOrigin](
     variadicFormComponentIds: Set[FormComponentId],
-    data: Map[FormComponentId, String]): VariadicFormData =
-    VariadicFormData(
+    data: Map[FormComponentId, String]): VariadicFormData[S] =
+    VariadicFormData[S](
       data.map {
         case (id, s) =>
           if (variadicFormComponentIds(id.reduceToTemplateFieldId))

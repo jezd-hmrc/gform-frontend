@@ -17,6 +17,7 @@
 package uk.gov.hmrc.gform.models
 
 import cats.data.NonEmptyList
+import uk.gov.hmrc.gform.sharedmodel.SourceOrigin
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.{ Obligations, RetrievedObligations, TaxResponse }
 

@@ -24,6 +24,7 @@ trait Basic extends PageMode
 trait GroupExpanded extends PageMode
 trait FullyExpanded extends PageMode
 trait Exhaustive extends PageMode
+trait Visibility extends PageMode
 
 case class Page[A <: PageMode](
   title: SmartString,

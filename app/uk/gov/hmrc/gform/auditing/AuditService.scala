@@ -22,6 +22,7 @@ import uk.gov.hmrc.gform.auth.models.{ AnonymousRetrievals, AuthenticatedRetriev
 import uk.gov.hmrc.gform.gform.CustomerId
 import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.models.mappings.{ IRCT, IRSA, NINO, VATReg }
+import uk.gov.hmrc.gform.sharedmodel.SourceOrigin
 import uk.gov.hmrc.gform.sharedmodel.form.{ Form, FormField }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponent, FormTemplate, FullyExpanded, Group, UkSortCode }
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -34,7 +35,7 @@ trait AuditService {
 
   def auditConnector: AuditConnector
 
-  def formToMap(form: Form, formModel: FormModel[FullyExpanded]): Map[String, String] =
+  def formToMap(form: Form, formModel: FormModel[FullyExpanded, SourceOrigin.Current]): Map[String, String] =
     /* val optSortCode: List[FormComponent] = sections.flatMap { section =>
      *   val groupFields = section.fields.collect {
      *     case FormComponent(_, Group(fields, _, _, _, _, _), _, _, _, _, _, _, _, _, _, _, _, _) => fields
@@ -72,7 +73,7 @@ trait AuditService {
 
   def sendSubmissionEvent(
     form: Form,
-    formModel: FormModel[FullyExpanded],
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current],
     retrievals: MaterialisedRetrievals,
     customerId: CustomerId)(implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[_]) =
     sendEvent(form, formToMap(form, formModel), retrievals, customerId)
@@ -89,7 +90,7 @@ trait AuditService {
 
   def calculateSubmissionEvent(
     form: Form,
-    formModel: FormModel[FullyExpanded],
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current],
     retrievals: MaterialisedRetrievals,
     customerId: CustomerId)(implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[_]): ExtendedDataEvent =
     //eventFor(form, formToMap(form, formTemplate.sections :+ formTemplate.declarationSection), retrievals, customerId)

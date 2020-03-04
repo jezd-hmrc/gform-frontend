@@ -18,6 +18,7 @@ package uk.gov.hmrc.gform.models.javascript
 
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.models.{ FormModel, PageModel }
+import uk.gov.hmrc.gform.sharedmodel.SourceOrigin
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.gform.sharedmodel.graph.{ DependencyGraph, GraphNode, SimpleGN }
 
@@ -25,7 +26,7 @@ object JavascriptMaker {
 
   def generateJs(
     sectionNumber: SectionNumber,
-    formModel: FormModel[FullyExpanded],
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current],
     formTemplate: FormTemplate): String = {
     val pageModel = formModel(sectionNumber)
     val jsFormComponentModels = pageModel.jsFormComponentModels
@@ -36,7 +37,7 @@ object JavascriptMaker {
 
   }
 
-  private def mkDependencies(formModel: FormModel[FullyExpanded]): Dependencies = {
+  private def mkDependencies(formModel: FormModel[FullyExpanded, SourceOrigin.Current]): Dependencies = {
     val graph = DependencyGraph.toGraph(formModel)
 
     val graphTopologicalOrder: Either[graph.NodeT, Traversable[(Int, List[GraphNode])]] =

@@ -22,20 +22,20 @@ import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 import scalax.collection.GraphEdge._
 import uk.gov.hmrc.gform.models.FormModel
-import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
+import uk.gov.hmrc.gform.sharedmodel.{ SourceOrigin, VariadicFormData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 
 object DependencyGraph {
 
   val emptyGraph: Graph[GraphNode, DiEdge] = Graph.empty
 
-  def toGraph(formModel: FormModel[FullyExpanded]): Graph[GraphNode, DiEdge] =
+  def toGraph(formModel: FormModel[FullyExpanded, SourceOrigin.OutOfDate]): Graph[GraphNode, DiEdge] =
     graphFrom(formModel)
 
   //def toGraphFull(formTemplate: FormTemplate): Graph[GraphNode, DiEdge] = ???
   //graphFrom(FormModel.fromformTemplate.expandFormTemplateFull)
 
-  private def graphFrom(formModel: FormModel[FullyExpanded]): Graph[GraphNode, DiEdge] = {
+  private def graphFrom(formModel: FormModel[FullyExpanded, SourceOrigin.OutOfDate]): Graph[GraphNode, DiEdge] = {
 
     val allFcIds = formModel.allFormComponentIds
 

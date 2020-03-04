@@ -31,9 +31,9 @@ import uk.gov.hmrc.gform.fileupload.{ Attachments, Envelope, FileUploadService }
 import uk.gov.hmrc.gform.graph.{ RecData, Recalculation }
 import uk.gov.hmrc.gform.models.FormModel
 import uk.gov.hmrc.gform.models.helpers.Fields
+import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, LangADT, SourceOrigin, VariadicFormData }
 import uk.gov.hmrc.gform.sharedmodel.form._
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
-import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, LangADT, VariadicFormData }
 import uk.gov.hmrc.gform.summarypdf.PdfGeneratorService
 import uk.gov.hmrc.gform.validation.ValidationUtil.{ GformError, ValidatedType }
 import uk.gov.hmrc.gform.validation.{ FormFieldValidationResult, ValidationService }
@@ -99,7 +99,7 @@ class DeclarationController(
 
   private def continueToSubmitDeclaration(
     cache: AuthCacheWithForm,
-    dataRaw: VariadicFormData,
+    dataRaw: VariadicFormData[SourceOrigin.OutOfDate],
     maybeAccessCode: Option[AccessCode],
     envelopeId: EnvelopeId,
     envelope: Envelope)(
@@ -151,13 +151,12 @@ class DeclarationController(
 
   private def recalculateFormData(cache: AuthCacheWithForm)(implicit hc: HeaderCarrier) =
     recalculation.recalculateFormData(
-      extractFormDataFields(cache),
+      cache.variadicFormData,
       cache.formTemplate,
       cache.retrievals,
       cache.form.thirdPartyData,
-      cache.form.envelopeId)
-
-  private def extractFormDataFields(cache: AuthCacheWithForm) = cache.variadicFormData
+      cache.form.envelopeId
+    )
 
   private def processValidation(
     valType: ValidatedType[Unit],
@@ -195,7 +194,7 @@ class DeclarationController(
 
     cache.formTemplate.destinations match {
       case _: DestinationList => {
-        val formModel: FormModel[FullyExpanded] = data.formModel
+        val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = data.formModel
         val updatedCache = cache.copy(form = updateFormWithDeclaration(cache.form, cache.formTemplate, data))
         gformBackEnd
           .submitWithUpdatedFormStatus(Signed, updatedCache, maybeAccessCode, None, attachments, formModel)
@@ -216,7 +215,7 @@ class DeclarationController(
     cache: AuthCacheWithForm,
     maybeAccessCode: Option[AccessCode],
     customerId: CustomerId,
-    formModel: FormModel[FullyExpanded]
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current]
   )(implicit request: Request[_]) = {
     if (customerId.isEmpty)
       Logger.warn(s"DMS submission with empty customerId ${loggingHelpers.cleanHeaderCarrierHeader(hc)}")
@@ -231,7 +230,7 @@ class DeclarationController(
   private def auditSubmissionEvent(
     cache: AuthCacheWithForm,
     customerId: CustomerId,
-    formModel: FormModel[FullyExpanded])(implicit request: Request[_]) =
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current])(implicit request: Request[_]) =
     auditService.sendSubmissionEvent(
       cache.form,
       //cache.formTemplate.sections :+ cache.formTemplate.declarationSection,

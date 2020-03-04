@@ -17,7 +17,8 @@
 package uk.gov.hmrc.gform.controllers
 
 import cats.syntax.show._
-import uk.gov.hmrc.gform.models.{ FormModel }
+import uk.gov.hmrc.gform.models.FormModel
+import uk.gov.hmrc.gform.sharedmodel.SourceOrigin
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.http.BadRequestException
@@ -32,7 +33,9 @@ trait Navigation {
 }
 
 // TODO: Origin should not be in controllers, but Navigator probably should!
-case class Origin(data: FormDataRecalculated) extends Navigation
+case class Origin(data: FormDataRecalculated) extends Navigation {
+  //def data[S <: SourceOrigin] = sssdata
+}
 
 sealed trait Direction
 
@@ -46,7 +49,7 @@ case class EditAddToList(idx: Int, addToListId: AddToListId) extends Direction
 
 case class Navigator(
   sectionNumber: SectionNumber,
-  formModel: FormModel[FullyExpanded],
+  formModel: FormModel[FullyExpanded, SourceOrigin.Current],
   data: FormDataRecalculated
 ) extends Navigation {
   require(

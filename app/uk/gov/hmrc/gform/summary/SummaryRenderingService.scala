@@ -39,7 +39,7 @@ import uk.gov.hmrc.gform.models.ExpandUtils._
 import uk.gov.hmrc.gform.models.{ FormModel, FormModelBuilder, PageModel, Repeater, Singleton }
 import uk.gov.hmrc.gform.models.helpers.Fields.flattenGroups
 import uk.gov.hmrc.gform.models.helpers.{ Fields, TaxPeriodHelper }
-import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, LangADT, Obligations, PdfHtml, SmartString, SubmissionRef }
+import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, LangADT, Obligations, PdfHtml, SmartString, SourceOrigin, SubmissionRef }
 import uk.gov.hmrc.gform.sharedmodel.form.{ FormDataRecalculated, ValidationResult }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.SectionTitle4Ga.sectionTitle4GaFactory
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
@@ -418,7 +418,7 @@ object SummaryRenderingService {
   }
 }
 
-class NextRepeaterAfterRepeater(formModel: FormModel[FullyExpanded]) {
+class NextRepeaterAfterRepeater(formModel: FormModel[FullyExpanded, SourceOrigin.Current]) {
   def unapply(page: PageModel[FullyExpanded]): Option[Repeater[FullyExpanded]] =
     page match {
       case r: Repeater[_] => formModel.repeaterFor(r.index + 1, r.source.id)
@@ -427,7 +427,9 @@ class NextRepeaterAfterRepeater(formModel: FormModel[FullyExpanded]) {
     }
 }
 
-class IsFirstSingletonOfAddToList(sectionNumber: SectionNumber, formModel: FormModel[FullyExpanded]) {
+class IsFirstSingletonOfAddToList(
+  sectionNumber: SectionNumber,
+  formModel: FormModel[FullyExpanded, SourceOrigin.Current]) {
   val lookup: Map[AddToListId, Int] = formModel.firstsAddToList
   def unapply(
     page: PageModel[FullyExpanded]): Option[(Section.AddToList, Singleton[FullyExpanded], Repeater[FullyExpanded])] =

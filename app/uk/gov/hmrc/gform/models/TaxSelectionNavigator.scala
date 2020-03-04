@@ -18,8 +18,8 @@ package uk.gov.hmrc.gform.models
 
 import cats.instances.list._
 import cats.syntax.eq._
+import uk.gov.hmrc.gform.sharedmodel.{ Obligation, SourceOrigin, TaxResponse }
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
-import uk.gov.hmrc.gform.sharedmodel.{ Obligation, TaxResponse }
 
 sealed trait TaxSelectionNavigation
 case object DoNotGoBackToTaxPeriodSelection extends TaxSelectionNavigation

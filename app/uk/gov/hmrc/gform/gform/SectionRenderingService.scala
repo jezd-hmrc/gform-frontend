@@ -98,7 +98,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
 
   def renderAddToList(
     repeater: Repeater[FullyExpanded],
-    formModel: FormModel[FullyExpanded],
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current],
     maybeAccessCode: Option[AccessCode],
     form: Form,
     sectionNumber: SectionNumber,
@@ -169,7 +169,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     //envelope: Envelope,
     envelopeId: EnvelopeId,
     //validatedType: ValidatedType[ValidationResult],
-    //formModel: FormModel[FullyExpanded],
+    //formModel: FormModel[FullyExpanded, SourceOrigin.Current],
     singleton: Singleton[FullyExpanded],
     formMaxAttachmentSizeMB: Int,
     contentTypes: List[ContentType],

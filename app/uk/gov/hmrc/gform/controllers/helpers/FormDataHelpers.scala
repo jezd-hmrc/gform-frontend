@@ -22,7 +22,7 @@ import cats.syntax.show._
 import com.softwaremill.quicklens._
 import play.api.mvc.Results._
 import play.api.mvc.{ AnyContent, Request, Result }
-import uk.gov.hmrc.gform.sharedmodel.{ VariadicFormData, VariadicValue }
+import uk.gov.hmrc.gform.sharedmodel.{ SourceOrigin, VariadicFormData, VariadicValue }
 import uk.gov.hmrc.gform.sharedmodel.form.{ Form, FormData, FormField, FormId, VisitIndex }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponentId, FormTemplate, Group }
 import uk.gov.hmrc.http.HeaderCarrier
@@ -38,7 +38,8 @@ object FormDataHelpers {
     formData.fields.map(formField => formField.id -> List(formField.value)).toMap
 
   def processResponseDataFromBody(request: Request[AnyContent], template: FormTemplate)(
-    continuation: VariadicFormData => Future[Result])(implicit hc: HeaderCarrier): Future[Result] =
+    continuation: VariadicFormData[SourceOrigin.OutOfDate] => Future[Result])(
+    implicit hc: HeaderCarrier): Future[Result] =
     request.body.asFormUrlEncoded
       .map(_.map { case (a, b) => (FormComponentId(a), b.map(_.trim)) }) match {
       case Some(data) => continuation(buildVariadicFormDataFromBrowserPostData(template, data))
@@ -52,7 +53,7 @@ object FormDataHelpers {
   def anyFormId(data: Map[FormComponentId, Seq[String]]): Option[FormId] =
     data.get(FormComponentId("formId")).flatMap(_.filterNot(_.isEmpty()).headOption).map(FormId.apply)
 
-  def dataEnteredInGroup(group: Group, fieldData: VariadicFormData): Boolean =
+  def dataEnteredInGroup[S <: SourceOrigin](group: Group, fieldData: VariadicFormData[S]): Boolean =
     group.fields
       .map(_.id)
       .exists(id => fieldData.get(id).exists(_.exists(!_.isEmpty)))
@@ -69,7 +70,7 @@ object FormDataHelpers {
   // in the formTemplate should be represented by a VariadicValue.One value.
   private def buildVariadicFormDataFromBrowserPostData(
     template: FormTemplate,
-    data: Map[FormComponentId, Seq[String]]): VariadicFormData = {
+    data: Map[FormComponentId, Seq[String]]): VariadicFormData[SourceOrigin.OutOfDate] = {
     val variadicFormComponentIds = VariadicFormData.listVariadicFormComponentIds(template)
 
     VariadicFormData(

@@ -20,7 +20,7 @@ import cats.instances.list._
 import cats.syntax.eq._
 import cats.syntax.foldable._
 import uk.gov.hmrc.gform.lookup.LookupExtractors
-import uk.gov.hmrc.gform.sharedmodel.VariadicFormData
+import uk.gov.hmrc.gform.sharedmodel.{ SourceOrigin, VariadicFormData }
 import uk.gov.hmrc.gform.sharedmodel.form.FormDataRecalculated
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 
@@ -94,7 +94,9 @@ object ExpandUtils {
       case _              => false
     }
 
-  def findFormComponent(targetFcId: FormComponentId, formModel: FormModel[FullyExpanded]): Option[FormComponent] =
+  def findFormComponent(
+    targetFcId: FormComponentId,
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current]): Option[FormComponent] =
     formModel.allFormComponents.find(_.id == targetFcId)
 
   private val NumericPrefix = "^(\\d+)_.*".r

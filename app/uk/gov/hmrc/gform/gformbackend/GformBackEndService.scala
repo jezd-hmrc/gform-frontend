@@ -26,6 +26,7 @@ import uk.gov.hmrc.gform.gform.{ CustomerId, FrontEndSubmissionVariablesBuilder,
 import uk.gov.hmrc.gform.graph.{ CustomerIdRecalculation, EmailParameterRecalculation, Recalculation }
 import uk.gov.hmrc.gform.lookup.LookupRegistry
 import uk.gov.hmrc.gform.models.FormModel
+import uk.gov.hmrc.gform.sharedmodel.SourceOrigin
 import uk.gov.hmrc.gform.sharedmodel.form.{ Form, FormIdData, FormStatus, UserData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ EmailParametersRecalculated, FormComponentId, FormTemplate, FormTemplateId, FullyExpanded }
 import uk.gov.hmrc.gform.eval.smartstring.SmartStringEvaluator
@@ -50,7 +51,7 @@ trait GformBackEndAlgebra[F[_]] {
     maybeAccessCode: Option[AccessCode],
     submissionDetails: Option[SubmissionDetails],
     attachments: Attachments,
-    formModel: FormModel[FullyExpanded]
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current]
   )(
     implicit
     request: Request[_],
@@ -98,7 +99,7 @@ class GformBackEndService(
     maybeAccessCode: Option[AccessCode],
     submissionDetails: Option[SubmissionDetails],
     attachments: Attachments,
-    formModel: FormModel[FullyExpanded]
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current]
   )(
     implicit
     request: Request[_],
@@ -121,7 +122,7 @@ class GformBackEndService(
     customerId: CustomerId,
     submissionDetails: Option[SubmissionDetails],
     attachments: Attachments,
-    formModel: FormModel[FullyExpanded]
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current]
   )(
     implicit
     request: Request[_],
@@ -167,7 +168,7 @@ class GformBackEndService(
     htmlForPDF: PdfHtml,
     structuredFormData: StructuredFormValue.ObjectStructure,
     attachments: Attachments,
-    formModel: FormModel[FullyExpanded]
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current]
   )(implicit hc: HeaderCarrier): Future[HttpResponse] =
     gformConnector.submitForm(
       FormIdData(retrievals, formTemplate._id, maybeAccessCode),
@@ -192,7 +193,7 @@ class GformBackEndService(
     emailParameters: EmailParametersRecalculated,
     structuredFormData: StructuredFormValue.ObjectStructure,
     attachments: Attachments,
-    formModel: FormModel[FullyExpanded]
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current]
   ): SubmissionData =
     SubmissionData(
       htmlForPDF,

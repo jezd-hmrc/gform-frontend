@@ -157,7 +157,7 @@ class SummarySpec extends Spec with FormModelSupport {
   }
 
   "Summary" should "display the summary sections" in new Test {
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate, formDataRecalculated)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate, formDataRecalculated)
     val render = SummaryRenderingService
       .summaryForRender(
         f,
@@ -175,7 +175,7 @@ class SummarySpec extends Spec with FormModelSupport {
   it should "display links to page sections" in new Test {
     override def formTemplate = super.formTemplate.copy(sections = List(section0, section1))
 
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate)
 
     val render =
       SummaryRenderingService
@@ -308,7 +308,7 @@ class SummarySpec extends Spec with FormModelSupport {
       )))
 
     override def fieldValues = formTemplate.sections.flatMap(_.fields)
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate, formDataRecalculated)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate, formDataRecalculated)
     val render = SummaryRenderingService
       .summaryForRender(
         f,
@@ -326,7 +326,7 @@ class SummarySpec extends Spec with FormModelSupport {
   }
 
   it should "display the title when shortName is not present in the section" in new Test {
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate)
     val render =
       SummaryRenderingService
         .summaryForRender(
@@ -347,7 +347,7 @@ class SummarySpec extends Spec with FormModelSupport {
     val shortName = "THIS_IS_A_VERY_VERY_VERY_SHORT_NAME"
     val section = section0.updateShortName(Some(toSmartString(shortName)))
     override val formTemplate = super.formTemplate.copy(sections = List(section))
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate)
     val render =
       SummaryRenderingService
         .summaryForRender(
@@ -383,7 +383,7 @@ class SummarySpec extends Spec with FormModelSupport {
     val section =
       section0.updateFields(List(addressField)).updateShortName(Some(toSmartString("Address section")))
     override val formTemplate = super.formTemplate.copy(sections = List(section))
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate)
     val render =
       SummaryRenderingService
         .summaryForRender(
@@ -417,7 +417,7 @@ class SummarySpec extends Spec with FormModelSupport {
     val section =
       section0.updateFields(List(addressField)).updateShortName(Some(toSmartString("Address section")))
     override val formTemplate = super.formTemplate.copy(sections = List(section))
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate)
     val render =
       SummaryRenderingService
         .summaryForRender(
@@ -452,7 +452,7 @@ class SummarySpec extends Spec with FormModelSupport {
     val section =
       section0.updateFields(List(addressField)).updateShortName(Some(toSmartString("A section")))
     override val formTemplate = super.formTemplate.copy(sections = List(section))
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate)
     val render =
       SummaryRenderingService
         .summaryForRender(
@@ -487,7 +487,7 @@ class SummarySpec extends Spec with FormModelSupport {
     val section =
       section0.updateFields(List(addressField)).updateShortName(Some(toSmartString("A section")))
     override val formTemplate = super.formTemplate.copy(sections = List(section))
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate)
     val render =
       SummaryRenderingService
         .summaryForRender(
@@ -522,7 +522,7 @@ class SummarySpec extends Spec with FormModelSupport {
     val section =
       section0.updateFields(List(addressField)).updateShortName(Some(toSmartString("A section")))
     override val formTemplate = super.formTemplate.copy(sections = List(section))
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate)
     val render =
       SummaryRenderingService
         .summaryForRender(
@@ -558,7 +558,7 @@ class SummarySpec extends Spec with FormModelSupport {
       section0.updateFields(List(addressField)).updateShortName(Some(toSmartString("A section")))
     override val formTemplate = super.formTemplate.copy(sections = List(section))
     //    override val f: FieldValue => Option[FormFieldValidationResult] = okValues(Map.empty, fieldValues, envelope)
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate)
     val render =
       SummaryRenderingService
         .summaryForRender(
@@ -593,7 +593,7 @@ class SummarySpec extends Spec with FormModelSupport {
     val section =
       section0.updateFields(List(addressField)).updateShortName(Some(toSmartString("A section")))
     override val formTemplate = super.formTemplate.copy(sections = List(section))
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate)
     val render =
       SummaryRenderingService
         .summaryForRender(
@@ -628,7 +628,7 @@ class SummarySpec extends Spec with FormModelSupport {
     val section =
       section0.updateFields(List(addressField)).updateShortName(Some(toSmartString("A section")))
     override val formTemplate = super.formTemplate.copy(sections = List(section))
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate)
     val render =
       SummaryRenderingService
         .summaryForRender(
@@ -653,7 +653,7 @@ class SummarySpec extends Spec with FormModelSupport {
     )
     val data1 = FormDataRecalculated.empty.copy(
       recData = RecData.fromData(VariadicFormData.ones(FormComponentId("firstName") -> "Pete")))
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate, data1)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate, data1)
     val renderWithDataMatching = SummaryRenderingService.summaryForRender(
       f,
       data1,
@@ -668,7 +668,7 @@ class SummarySpec extends Spec with FormModelSupport {
     val data2 = FormDataRecalculated(
       Set(IncludeIfGN(FormComponentId("includeId_X"), includeIf)),
       RecData.fromData(VariadicFormData.ones(FormComponentId("firstName") -> "*Not*Pete")))
-    val formModel2: FormModel[FullyExpanded] = mkFormModel(formTemplate, data2)
+    val formModel2: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate, data2)
     val renderWithDataMismatch = SummaryRenderingService.summaryForRender(
       f,
       data2,
@@ -704,7 +704,7 @@ class SummarySpec extends Spec with FormModelSupport {
     override def section0 =
       Section.NonRepeatingPage(Page(toSmartString(""), None, None, None, None, None, List(groupFieldValue), None, None))
     override def formTemplate = super.formTemplate.copy(sections = List(section0))
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate)
     val render0 =
       SummaryRenderingService
         .summaryForRender(
@@ -734,7 +734,7 @@ class SummarySpec extends Spec with FormModelSupport {
     )
 
     val filedValues1 = formTemplate.sections.flatMap(_.fields)
-    val formModel2: FormModel[FullyExpanded] = mkFormModel(formTemplateWGroupWithShortname)
+    val formModel2: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplateWGroupWithShortname)
     val render1 = SummaryRenderingService
       .summaryForRender(
         f,
@@ -759,7 +759,7 @@ class SummarySpec extends Spec with FormModelSupport {
       Set(IncludeIfGN(FormComponentId("includeId_X"), includeIf)),
       RecData.fromData(VariadicFormData.ones(FormComponentId("firstName") -> "*Not*Pete")))
 
-    val formModel: FormModel[FullyExpanded] = mkFormModel(formTemplate, data1)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(formTemplate, data1)
 
     val summaryForRender = SummaryRenderingService.summaryForRender(
       f,

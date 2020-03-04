@@ -35,7 +35,7 @@ import uk.gov.hmrc.gform.eval.BooleanExprEval
 import uk.gov.hmrc.gform.gform.{ AuthContextPrepop, StructuredFormDataBuilder }
 import uk.gov.hmrc.gform.graph.processor.UserCtxEvaluatorProcessor
 import uk.gov.hmrc.gform.models.{ FormModel, FormModelBuilder }
-import uk.gov.hmrc.gform.sharedmodel.{ IdNumberValue, RecalculatedTaxPeriodKey, SubmissionRef, VariadicFormData, VariadicValue }
+import uk.gov.hmrc.gform.sharedmodel.{ IdNumberValue, RecalculatedTaxPeriodKey, SourceOrigin, SubmissionRef, VariadicFormData, VariadicValue }
 import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, FormDataRecalculated, ThirdPartyData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.gform.sharedmodel.graph.{ DependencyGraph, GraphNode, IncludeIfGN, SimpleGN }
@@ -71,11 +71,11 @@ class Recalculation[F[_]: Monad, E](
   val error: GraphException => E
 ) {
 
-  type Context = (Set[GraphNode], RecData)
+  type Context = (Set[GraphNode], RecData[SourceOrigin.OutOfDate])
   type ContextWithNodesToRecalculate = (Set[GraphNode], List[FormComponentId])
 
   def recalculateFormData(
-    data: VariadicFormData,
+    data: VariadicFormData[SourceOrigin.OutOfDate],
     formTemplate: FormTemplate,
     retrievals: MaterialisedRetrievals,
     thirdPartyData: ThirdPartyData,
@@ -90,7 +90,7 @@ class Recalculation[F[_]: Monad, E](
     )
 
   def recalculateFormDataWithLookup(
-    data: VariadicFormData,
+    data: VariadicFormData[SourceOrigin.OutOfDate],
     formTemplate: FormTemplate,
     retrievals: MaterialisedRetrievals,
     thirdPartyData: ThirdPartyData,
@@ -104,17 +104,20 @@ class Recalculation[F[_]: Monad, E](
     }
 
   private def recalculateFormData_(
-    data: VariadicFormData,
+    data: VariadicFormData[SourceOrigin.OutOfDate],
     formTemplate: FormTemplate,
     retrievals: MaterialisedRetrievals,
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId,
-    additionalFcLookup: Map[FormComponentId, FormComponent])(
-    implicit hc: HeaderCarrier): EitherT[F, GraphException, FormDataRecalculated] = {
+    additionalFcLookup: Map[FormComponentId, FormComponent]
+  )(
+    implicit
+    hc: HeaderCarrier
+  ): EitherT[F, GraphException, FormDataRecalculated] = {
 
     val formModelBuilder = new FormModelBuilder(retrievals, formTemplate, thirdPartyData, envelopeId)
 
-    val formModel = formModelBuilder.fromRawData(data)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.OutOfDate] = formModelBuilder.fromRawData(data)
 
     val graph: Graph[GraphNode, DiEdge] = DependencyGraph.toGraph(formModel)
 
@@ -162,7 +165,7 @@ class Recalculation[F[_]: Monad, E](
       */
     def markInvisible(
       acc: ContextWithNodesToRecalculate,
-      dataLookup: RecData,
+      dataLookup: RecData[SourceOrigin.OutOfDate],
       gn: GraphNode): F[ContextWithNodesToRecalculate] = {
       val (visibilitySet, nodesToRecalculate) = acc
       gn match {
@@ -215,9 +218,10 @@ class Recalculation[F[_]: Monad, E](
 
       def recalculateLayerNodes(
         visSet: Set[GraphNode],
-        nodes: List[FormComponentId]): EitherT[F, GraphException, RecData] = {
+        nodes: List[FormComponentId]): EitherT[F, GraphException, RecData[SourceOrigin.OutOfDate]] = {
 
-        val genesis: EitherT[F, GraphException, RecData] = EitherT(dataLookup.pure[F].map(Right.apply))
+        val genesis: EitherT[F, GraphException, RecData[SourceOrigin.OutOfDate]] = EitherT(
+          dataLookup.pure[F].map(Right.apply))
 
         nodes.foldLeft(genesis) {
           case (dataLookupF, node) =>
@@ -245,7 +249,7 @@ class Recalculation[F[_]: Monad, E](
       } yield (visSet, recalculatedData)
     }
 
-    val data2 = data.mapValues {
+    val data2: VariadicFormData[SourceOrigin.OutOfDate] = data.mapValues {
       case (fcId, value) =>
         fcLookup.get(fcId) match {
           case Some(fc) =>
@@ -274,12 +278,12 @@ class Recalculation[F[_]: Monad, E](
                }
     } yield {
       val (allInvisible, recalculatedData) = recalc
-      val formModelNew = formModelBuilder.fromRawData(recalculatedData.data)
+      val formModelNew = formModelBuilder.fromFormDataRecalculated(recalculatedData)
       FormDataRecalculated(allInvisible, recalculatedData, formModelNew)
     }
   }
 
-  private def hasData(fc: FormComponent, dataLookup: VariadicFormData): Boolean =
+  private def hasData(fc: FormComponent, dataLookup: VariadicFormData[SourceOrigin.OutOfDate]): Boolean =
     dataLookup.get(fc.id).fold(false)(!_.exists(_.isEmpty))
 
   private def isHmrcTaxPeriodComponent(fc: FormComponent): Boolean = fc match {
@@ -294,7 +298,7 @@ class Recalculation[F[_]: Monad, E](
     dataLookup: RecData,
     retrievals: MaterialisedRetrievals,
     formTemplate: FormTemplate,
-    formModel: FormModel[FullyExpanded],
+    formModel: FormModel[FullyExpanded, SourceOrigin.OutOfDate],
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId)(implicit hc: HeaderCarrier): F[Either[GraphException, RecData]] =
     Either.fromOption(fcLookup.get(fcId), NoFormComponent(fcId, fcLookup)).traverse { fc =>
@@ -327,7 +331,7 @@ class Recalculation[F[_]: Monad, E](
     dataLookup: RecData,
     retrievals: MaterialisedRetrievals,
     formTemplate: FormTemplate,
-    formModel: FormModel[FullyExpanded],
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current],
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId)(implicit hc: HeaderCarrier): F[RecalculationOp] =
     fc match {
@@ -362,11 +366,17 @@ class Evaluator[F[_]: Monad](
     }
   }
 
-  private def evalFormCtx(visSet: Set[GraphNode], fc: FormCtx, dataLookup: VariadicFormData): Convertible[F] =
+  private def evalFormCtx(
+    visSet: Set[GraphNode],
+    fc: FormCtx,
+    dataLookup: VariadicFormData[SourceOrigin.OutOfDate]): Convertible[F] =
     if (isHidden(fc.toFieldId, visSet)) MaybeConvertibleHidden(defaultF, fc.toFieldId)
     else getSubmissionData(dataLookup, fc.toFieldId)
 
-  def evalVariadicFormCtx(visSet: Set[GraphNode], fc: FormCtx, dataLookup: VariadicFormData): Option[VariadicValue] =
+  def evalVariadicFormCtx(
+    visSet: Set[GraphNode],
+    fc: FormCtx,
+    dataLookup: VariadicFormData[SourceOrigin.OutOfDate]): Option[VariadicValue] =
     if (isHidden(fc.toFieldId, visSet)) None
     else dataLookup.get(fc.toFieldId)
 
@@ -374,10 +384,10 @@ class Evaluator[F[_]: Monad](
     visSet: Set[GraphNode],
     fcId: FormComponentId,
     expr: Expr,
-    dataLookup: VariadicFormData,
+    dataLookup: VariadicFormData[SourceOrigin.OutOfDate],
     retrievals: MaterialisedRetrievals,
     formTemplate: FormTemplate,
-    formModel: FormModel[FullyExpanded],
+    formModel: FormModel[FullyExpanded, SourceOrigin.OutOfDate],
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId)(implicit hc: HeaderCarrier): Convertible[F] =
     expr match {
@@ -473,20 +483,22 @@ class Evaluator[F[_]: Monad](
       )
       .map(_.flatMap(_.cast[NewValue]).map(_.value))
 
-  private def getSubmissionData(dataLookup: VariadicFormData, fcId: FormComponentId): Convertible[F] =
+  private def getSubmissionData[S <: SourceOrigin](
+    dataLookup: VariadicFormData[S],
+    fcId: FormComponentId): Convertible[F] =
     dataLookup.get(fcId).toList.flatMap(_.toSeq).headOption match {
       case None        => Converted((NonComputable: Computable).pure[F])
       case Some(value) => MaybeConvertible(value.pure[F])
     }
 
-  private def sum(
+  private def sum[S <: SourceOrigin](
     visSet: Set[GraphNode],
     componentContainingSum: FormComponentId,
     componentToBeSummed: FormComponentId,
-    dataLookup: VariadicFormData,
+    dataLookup: VariadicFormData[S],
     retrievals: MaterialisedRetrievals,
     formTemplate: FormTemplate,
-    formModel: FormModel[FullyExpanded],
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current],
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId)(implicit hc: HeaderCarrier) = {
     val results = dataLookup.collect {
@@ -523,12 +535,12 @@ class Evaluator[F[_]: Monad](
   def makeCalc[A](
     visSet: Set[GraphNode],
     fcId: FormComponentId,
-    dataLookup: VariadicFormData,
+    dataLookup: VariadicFormData[SourceOrigin.OutOfDate],
     xExpr: Expr,
     yExpr: Expr,
     retrievals: MaterialisedRetrievals,
     formTemplate: FormTemplate,
-    formModel: FormModel[FullyExpanded],
+    formModel: FormModel[FullyExpanded, SourceOrigin.OutOfDate],
     f: (Convertible[F], Convertible[F]) => (Option[BigDecimal], Option[BigDecimal]) => F[A],
     thirdPartyData: ThirdPartyData,
     envelopeId: EnvelopeId
@@ -559,7 +571,7 @@ case class Converted[F[_]](computable: F[Computable]) extends Convertible[F]
 case class NonConvertible[F[_]](str: F[RecalculationOp]) extends Convertible[F]
 case class MaybeConvertible[F[_]](str: F[String]) extends Convertible[F]
 case class MaybeConvertibleHidden[F[_]: Applicative](str: F[String], fcId: FormComponentId) extends Convertible[F] {
-  def visible[A](formModel: FormModel[FullyExpanded], f: String => Option[A]): F[Option[A]] = {
+  def visible[A](formModel: FormModel[FullyExpanded, SourceOrigin.Current], f: String => Option[A]): F[Option[A]] = {
     val lookup: Map[FormComponentId, FormComponent] = formModel.toLookup
     val maybeFc: Option[FormComponent] = lookup.get(fcId).filter {
       case IsChoice(_) => false
@@ -571,9 +583,9 @@ case class MaybeConvertibleHidden[F[_]: Applicative](str: F[String], fcId: FormC
 }
 
 object Convertible {
-  def asString[F[_]: Monad](
+  def asString[F[_]: Monad, S <: SourceOrigin](
     convertible: Convertible[F],
-    formModel: FormModel[FullyExpanded]): F[Option[RecalculationOp]] =
+    formModel: FormModel[FullyExpanded, S]): F[Option[RecalculationOp]] =
     convertible match {
       case Converted(computable) =>
         computable.map {
@@ -610,7 +622,9 @@ object Convertible {
       case n @ Nested(convertible) => n
     }
 
-  def convert[F[_]: Monad](convertible: Convertible[F], formModel: FormModel[FullyExpanded]): F[Option[BigDecimal]] =
+  def convert[F[_]: Monad](
+    convertible: Convertible[F],
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current]): F[Option[BigDecimal]] =
     convertible match {
       case Converted(computable) =>
         computable.map { case NonComputable => None; case Computed(bd) => Some(bd) }
@@ -624,7 +638,7 @@ object Convertible {
     convertible: Convertible[F],
     scale: Int,
     roundingMode: RoundingMode,
-    formModel: FormModel[FullyExpanded]): F[RecalculationOp] =
+    formModel: FormModel[FullyExpanded, SourceOrigin.Current]): F[RecalculationOp] =
     convert(convertible, formModel).flatMap {
       case Some(bd) =>
         RecalculationOp.newValue(NumberFormatUtil.roundAndFormat(bd, scale, roundingMode)).pure[F]

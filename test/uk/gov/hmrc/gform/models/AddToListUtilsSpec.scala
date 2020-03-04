@@ -109,8 +109,8 @@ class AddToListUtilsSpec
         )
       ) :: Nil
 
-    val formModel: FormModel[FullyExpanded] = mkFormModel(sections, data)
-    //val expectedFormModel: FormModel[FullyExpanded] = mkFormModel(sections, expectedData)
+    val formModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(sections, data)
+    //val expectedFormModel: FormModel[FullyExpanded, SourceOrigin.Current] = mkFormModel(sections, expectedData)
     //formModel.pages.foreach(println)
     val visitsIndex: VisitIndex = VisitIndex(Set.empty[Int])
     val expectedVisitsIndex: VisitIndex = VisitIndex(Set.empty[Int]) // TODO JoVl visitindex needs to be updated

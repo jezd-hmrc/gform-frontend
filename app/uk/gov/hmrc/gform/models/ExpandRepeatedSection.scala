@@ -24,7 +24,7 @@ import uk.gov.hmrc.gform.commons.BigDecimalUtil.toBigDecimalDefault
 import uk.gov.hmrc.gform.gform.FormComponentUpdater
 import uk.gov.hmrc.gform.graph.{ Convertible, Evaluator }
 import uk.gov.hmrc.gform.keystore.RepeatingComponentService
-import uk.gov.hmrc.gform.sharedmodel.SmartString
+import uk.gov.hmrc.gform.sharedmodel.{ SmartString, SourceOrigin }
 import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, FormDataRecalculated, ThirdPartyData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate._
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.Section.RepeatingPage
@@ -33,11 +33,11 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 object ExpandRepeatedSection {
 
-  def generateDynamicPages(
+  def generateDynamicPages[S <: SourceOrigin](
     page: Page[GroupExpanded],
     repeatingPage: Section.RepeatingPage,
-    data: FormDataRecalculated,
-    formModel: FormModel[GroupExpanded],
+    data: VariadicFormData[S],
+    formModel: FormModel[GroupExpanded, S],
     retrievals: MaterialisedRetrievals,
     formTemplate: FormTemplate,
     thirdPartyData: ThirdPartyData,
@@ -59,21 +59,22 @@ object ExpandRepeatedSection {
      * thirdPartyData: ThirdPartyData,
      * envelopeId: EnvelopeId) */
 
-    val count: Int = idEvaluator
-      .evalAsString(
-        data,
-        FormComponentId("dummy"),
-        repeatingPage.repeats.expr,
-        retrievals,
-        formTemplate,
-        thirdPartyData,
-        envelopeId
-      )
-      .flatMap(r => Try(r.toInt).toOption)
-      .getOrElse(1)
+    val count: Int = ??? // This needs to be determined based on VariadicFormData[S]
+    /* idEvaluator
+     * .evalAsString(
+     *   data,
+     *   FormComponentId("dummy"),
+     *   repeatingPage.repeats.expr,
+     *   retrievals,
+     *   formTemplate,
+     *   thirdPartyData,
+     *   envelopeId
+     * )
+     * .flatMap(r => Try(r.toInt).toOption)
+     * .getOrElse(1) */
 
     (1 to count).map { i =>
-      copyPage(page, i, data)
+      copyPage(page, i)
     }.toList
 
     //List.empty[Page[FullyExpanded]]
@@ -113,7 +114,7 @@ object ExpandRepeatedSection {
    *
    * } */
 
-  private def copyPage(page: Page[GroupExpanded], index: Int, data: FormDataRecalculated): Page[FullyExpanded] = {
+  private def copyPage(page: Page[GroupExpanded], index: Int): Page[FullyExpanded] = {
     def copyField(field: FormComponent): FormComponent = {
       val tpe = field.`type` match {
         case rc: RevealingChoice =>
@@ -134,17 +135,17 @@ object ExpandRepeatedSection {
     }
 
     page.copy(
-      title = buildText(page.title, index, data),
-      shortName = optBuildText(page.shortName, index, data),
+      title = buildText(page.title, index),
+      shortName = optBuildText(page.shortName, index),
       fields = page.fields.map(copyField)
     )
 
   }
 
-  private def optBuildText(maybeLs: Option[SmartString], index: Int, data: FormDataRecalculated): Option[SmartString] =
-    maybeLs.map(ls => buildText(ls, index, data))
+  private def optBuildText(maybeLs: Option[SmartString], index: Int): Option[SmartString] =
+    maybeLs.map(ls => buildText(ls, index))
 
-  private def buildText(ls: SmartString, index: Int, data: FormDataRecalculated): SmartString =
+  private def buildText(ls: SmartString, index: Int): SmartString =
     ls.replace("$n", index.toString)
 
   /* private def sumFunctionality(field: FormCtx, formTemplate: FormTemplate, data: FormDataRecalculated): BigDecimal = {

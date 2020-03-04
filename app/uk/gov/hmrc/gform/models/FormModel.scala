@@ -16,28 +16,30 @@
 
 package uk.gov.hmrc.gform.models
 
+import cats.MonadError
 import cats.syntax.eq._
 import cats.instances.int._
+import scala.concurrent.Future
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.gform.{ ExprUpdater, FormComponentUpdater }
-import uk.gov.hmrc.gform.graph.RecData
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ AddToListId, Expr }
-import uk.gov.hmrc.gform.sharedmodel.{ SmartString, VariadicFormData }
+import uk.gov.hmrc.gform.graph.{ RecData, Recalculation }
+import uk.gov.hmrc.gform.sharedmodel.{ SmartString, SourceOrigin, VariadicFormData }
 import uk.gov.hmrc.gform.sharedmodel.form.{ EnvelopeId, FormDataRecalculated, ThirdPartyData }
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ Basic, Exhaustive, ExpandedFormComponent, FormComponent, FormComponentId, FormTemplate, FullyExpanded, GroupExpanded, IncludeIf, Page, PageMode, Section, SectionNumber }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ AddToListId, Basic, Exhaustive, ExpandedFormComponent, Expr, FormComponent, FormComponentId, FormTemplate, FullyExpanded, GroupExpanded, IncludeIf, Page, PageMode, Section, SectionNumber }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.Section.{ AddToList, NonRepeatingPage, RepeatingPage }
 import uk.gov.hmrc.http.HeaderCarrier
 
-case class FormModel[A <: PageMode](pages: List[PageModel[A]]) extends AnyVal {
+case class FormModel[A <: PageMode, S <: SourceOrigin](pages: List[PageModel[A]]) extends AnyVal {
   def apply(sectionNumber: SectionNumber): PageModel[A] = pages(sectionNumber.value)
   def apply(sectionNumber: Int): PageModel[A] = pages(sectionNumber)
 
-  def visible(data: FormDataRecalculated): FormModel[A] = FormModel(pages.filter(data.isVisible))
+  def visible(data: FormDataRecalculated): FormModel[A, S] = FormModel(pages.filter(data.isVisible))
 
-  def visibleWithIndex(data: FormDataRecalculated): List[(PageModel[A], SectionNumber)] = pages.zipWithIndex.collect {
-    case (section, index) if data.isVisible(section) => (section, SectionNumber(index))
-  }
+  def visibleWithIndex(data: FormDataRecalculated): List[(PageModel[A], SectionNumber)] =
+    pages.zipWithIndex.collect {
+      case (section, index) if data.isVisible(section) => (section, SectionNumber(index))
+    }
 
   def toLookup: Map[FormComponentId, FormComponent] =
     allFormComponents.map(fc => fc.id -> fc).toMap
@@ -110,23 +112,39 @@ class FormModelBuilder(
   envelopeId: EnvelopeId
 ) {
 
-  def fromRawData(
-    rawData: VariadicFormData
-  )(
-    implicit hc: HeaderCarrier
-  ): FormModel[FullyExpanded] = {
-    val data = FormDataRecalculated(Set.empty, RecData.fromData(rawData), FormModel.empty)
-    expand(data)
-  }
+  //  def recalculation: Recalculation[Future, Throwable] = ???
 
-  def expand(
-    data: FormDataRecalculated
+  // Expands repeated sections based on data repeatsMax expression
+  def fromFormDataRecalculated(
+    rawData: VariadicFormData[SourceOrigin.Current]
+  )(
+    implicit
+    hc: HeaderCarrier
+  ): FormModel[FullyExpanded, SourceOrigin.Current] = ???
+  //val ssss = recalculation.recalculateFormData(rawData, formTemplate, retrievals, thirdPartyData, envelopeId)
+  //val data = FormDataRecalculated(Set.empty, RecData.fromData(rawData), FormModel.empty)
+  //expand(rawData)
+
+  // Expands repaeted sections based on data in VariadicFormData
+  def fromRawData(
+    rawData: VariadicFormData[SourceOrigin.OutOfDate]
+  )(
+    implicit
+    hc: HeaderCarrier
+  ): FormModel[FullyExpanded, SourceOrigin.OutOfDate] = ???
+  //val ssss = recalculation.recalculateFormData(rawData, formTemplate, retrievals, thirdPartyData, envelopeId)
+  //val data = FormDataRecalculated(Set.empty, RecData.fromData(rawData), FormModel.empty)
+  //expand(rawData)
+
+  def expand[S <: SourceOrigin](
+    //data: FormDataRecalculated
+    data: VariadicFormData[S]
   )(
     implicit hc: HeaderCarrier
-  ): FormModel[FullyExpanded] = {
-    val basicFm: FormModel[Basic] = basic()
-    val groupsFm: FormModel[GroupExpanded] = expandGroups(basicFm, data)
-    val fullyExpandedFm: FormModel[FullyExpanded] = mkFormModel(groupsFm, data)
+  ): FormModel[FullyExpanded, S] = {
+    val basicFm: FormModel[Basic, S] = basic()
+    val groupsFm: FormModel[GroupExpanded, S] = expandGroups(basicFm, data)
+    val fullyExpandedFm: FormModel[FullyExpanded, S] = mkFormModel(groupsFm, data)
     //println("fullyExpandedFm.pages: ")
     //fullyExpandedFm.pages.foreach(println)
     fullyExpandedFm
@@ -153,7 +171,7 @@ class FormModelBuilder(
   private def basicAddToList(s: Section.AddToList, index: Int): List[PageModel[Basic]] =
     s.pages.map(page => Singleton[Basic](mkSingleton(page, index)(s), s)).toList ++ List(mkRepeater(s, index))
 
-  private def basic(): FormModel[Basic] = FormModel[Basic] {
+  private def basic[S <: SourceOrigin](): FormModel[Basic, S] = FormModel[Basic, S] {
     formTemplate.sections
       .flatMap {
         case s: Section.NonRepeatingPage => List(Singleton[Basic](s.page, s))
@@ -162,23 +180,25 @@ class FormModelBuilder(
       }
   }
 
-  private def expandGroup(page: Page[Basic], data: FormDataRecalculated): Page[GroupExpanded] = {
-    val ss: List[ExpandedFormComponent] = page.fields.map(_.expandFormComponent(data.recData.data))
+  private def expandGroup[S <: SourceOrigin](page: Page[Basic], data: VariadicFormData[S]): Page[GroupExpanded] = {
+    val ss: List[ExpandedFormComponent] = page.fields.map(_.expandFormComponent(data))
     page.copy(fields = ss.flatMap(_.formComponents))
   }
 
-  private def expandRepeatedSection(
+  private def expandRepeatedSection[S <: SourceOrigin](
     page: Page[GroupExpanded],
     repeatingPage: Section.RepeatingPage,
-    data: FormDataRecalculated,
-    formModel: FormModel[GroupExpanded]
+    data: VariadicFormData[S],
+    formModel: FormModel[GroupExpanded, S]
   )(
     implicit hc: HeaderCarrier
   ): List[Page[FullyExpanded]] =
     ExpandRepeatedSection
       .generateDynamicPages(page, repeatingPage, data, formModel, retrievals, formTemplate, thirdPartyData, envelopeId)
 
-  private def expandGroups(formModel: FormModel[Basic], data: FormDataRecalculated): FormModel[GroupExpanded] =
+  private def expandGroups[S <: SourceOrigin](
+    formModel: FormModel[Basic, S],
+    data: VariadicFormData[S]): FormModel[GroupExpanded, S] =
     FormModel {
       formModel.pages.map {
         case Singleton(page, source) => Singleton(expandGroup(page, data), source)
@@ -187,12 +207,12 @@ class FormModelBuilder(
       }
     }
 
-  private def mkFormModel(
-    formModel: FormModel[GroupExpanded],
-    data: FormDataRecalculated
+  private def mkFormModel[S <: SourceOrigin](
+    formModel: FormModel[GroupExpanded, S],
+    data: VariadicFormData[S]
   )(
     implicit hc: HeaderCarrier
-  ): FormModel[FullyExpanded] =
+  ): FormModel[FullyExpanded, S] =
     FormModel {
       formModel.pages.flatMap {
         case Singleton(page, source) =>
@@ -211,13 +231,13 @@ class FormModelBuilder(
           val exDescription = AddToListUtils.expandSmartString(description, index, source)
           val repeater =
             Repeater[FullyExpanded](exTitle, exDescription, exShortName, includeIf, formComponent, index, source)
-          val nextOne: Option[Seq[String]] = data.recData.data.many(formComponent.id)
+          val nextOne: Option[Seq[String]] = data.many(formComponent.id)
           val next = nextOne.toSeq.flatten
 
           val rest = if (next.contains("0")) {
-            val abc: FormModel[Basic] = FormModel(basicAddToList(source, index + 1))
-            val efg: FormModel[GroupExpanded] = expandGroups(abc, data)
-            val hij: FormModel[FullyExpanded] = mkFormModel(efg, data)
+            val abc: FormModel[Basic, S] = FormModel(basicAddToList(source, index + 1))
+            val efg: FormModel[GroupExpanded, S] = expandGroups(abc, data)
+            val hij: FormModel[FullyExpanded, S] = mkFormModel(efg, data)
             hij.pages
           } else {
             Nil
@@ -230,10 +250,11 @@ class FormModelBuilder(
 
 object FormModel {
 
-  def empty[A <: PageMode]: FormModel[A] = FormModel[A](List.empty[PageModel[A]])
+  def empty[A <: PageMode, S <: SourceOrigin]: FormModel[A, S] = FormModel[A, S](List.empty[PageModel[A]])
 
   def fromCache(cache: AuthCacheWithForm)(
     implicit hc: HeaderCarrier
-  ): FormModel[FullyExpanded] = FormModelBuilder.fromCache(cache).fromRawData(cache.variadicFormData)
+  ): FormModel[FullyExpanded, SourceOrigin.Current] =
+    FormModelBuilder.fromCache(cache).fromRawData(cache.variadicFormData)
 
 }

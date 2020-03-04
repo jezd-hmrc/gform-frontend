@@ -23,7 +23,7 @@ import julienrf.json.derived
 import play.api.libs.json._
 
 import scala.util.Try
-import uk.gov.hmrc.gform.sharedmodel.{ SmartString, ValueClassFormat, VariadicFormData }
+import uk.gov.hmrc.gform.sharedmodel.{ SmartString, SourceOrigin, ValueClassFormat, VariadicFormData }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.DisplayWidth.DisplayWidth
 import uk.gov.hmrc.gform.sharedmodel.structuredform.{ FieldName, RoboticsXml, StructuredFormDataFieldNamePurpose }
 
@@ -136,7 +136,7 @@ object RevealingChoice {
     derived.oformat
   }
 
-  val slice: FormComponentId => VariadicFormData => RevealingChoice => List[FormComponent] = fcId =>
+  def slice[S <: SourceOrigin](fcId: FormComponentId): VariadicFormData[S] => RevealingChoice => List[FormComponent] =
     data =>
       revealingChoice => {
         for {
@@ -145,7 +145,7 @@ object RevealingChoice {
           rc             <- revealingChoice.options.get(i).toList
           revealingField <- rc.revealingFields
         } yield revealingField
-  }
+    }
 }
 
 case class IdType(value: String) extends AnyVal

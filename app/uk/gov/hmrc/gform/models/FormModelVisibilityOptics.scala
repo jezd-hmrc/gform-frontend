@@ -14,8 +14,15 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.gform
+package uk.gov.hmrc.gform.models
 
-import uk.gov.hmrc.gform.sharedmodel.{ IdNumberValue, RecalculatedTaxPeriodKey, SourceOrigin, VariadicFormData }
+import uk.gov.hmrc.gform.graph.RecData
+import uk.gov.hmrc.gform.models.{ FormModel }
+import uk.gov.hmrc.gform.sharedmodel.SourceOrigin
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.Visibility
 
-package graph {}
+class FormModelVisibilityOptics(formModel: FormModel[Visibility], recData: RecData[SourceOrigin.Current]) {
+  def allFormComponent: List[FormComponent] = ???
+
+  def allFormComponentIds: List[FormComponentId] = allFormComponent.map(_.id)
+}
