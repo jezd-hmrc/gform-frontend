@@ -74,11 +74,15 @@ object HtmlSanitiser {
         headerHtml)
   }
 
-  def acknowledgementPdf(doc: Document, extraData: String, declarationExtraData: String, formTemplate: FormTemplate)(
-    implicit l: LangADT): Unit = {
+  def acknowledgementPdf(
+    doc: Document,
+    extraData: String,
+    declarationExtraData: String,
+    footerHtml: String,
+    formTemplate: FormTemplate)(implicit l: LangADT): Unit = {
     val form = doc.getElementsByTag("form").first()
     form.prepend(h1(formTemplate.formName.value))
-    form.append(extraData + declarationExtraData)
+    form.append(extraData + declarationExtraData + footerHtml)
   }
 
   def printSectionPdf(doc: Document, headerHtml: String, footerHtml: String): Unit = {

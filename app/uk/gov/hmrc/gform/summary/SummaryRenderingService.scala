@@ -89,13 +89,15 @@ class SummaryRenderingService(
     for {
       summaryHtml <- getSummaryHTML(maybeAccessCode, cache, summaryPagePurpose)
     } yield {
-      val (extraData, declarationExtraData) = addExtraDataToDocument(submissionDetails, cache)
+      val (extraData, declarationExtraData, footerHtml) = addExtraDataToDocument(submissionDetails, cache)
       PdfHtml(
         HtmlSanitiser
           .sanitiseHtmlForPDF(
             summaryHtml,
             document =>
-              HtmlSanitiser.acknowledgementPdf(document, extraData, declarationExtraData, cache.formTemplate)))
+              HtmlSanitiser
+                .acknowledgementPdf(document, extraData, declarationExtraData, footerHtml, cache.formTemplate)))
+
     }
   }
 
@@ -164,7 +166,7 @@ class SummaryRenderingService(
     messages: Messages,
     curLang: LangADT,
     lise: SmartStringEvaluator
-  ): (String, String) = {
+  ): (String, String, String) = {
     val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
     val dateFormat = DateTimeFormatter.ofPattern("dd MMM yyyy")
     val formattedTime = submissionDetails.map(sd =>
@@ -196,7 +198,11 @@ class SummaryRenderingService(
       })
     ).toString()
 
-    (extraData, declarationExtraData)
+    pdfFooter: SmartString
+
+    val footerHtml = markDownParser(pdfFooter).toString
+
+    (extraData, declarationExtraData, footerHtml)
 
   }
 
