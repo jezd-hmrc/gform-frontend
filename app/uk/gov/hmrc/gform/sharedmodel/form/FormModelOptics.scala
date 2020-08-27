@@ -23,7 +23,7 @@ import com.softwaremill.quicklens._
 import play.api.libs.json._
 import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.eval.EvaluationResults
-import uk.gov.hmrc.gform.graph.Recalculation
+import uk.gov.hmrc.gform.graph.{ GraphData, Recalculation }
 import uk.gov.hmrc.gform.models.{ DataExpanded, DependencyGraphVerification, FormModel, FormModelBuilder, PageMode, PageModel, SectionSelector, SectionSelectorType, Visibility }
 import uk.gov.hmrc.gform.models.optics.{ DataOrigin, FormModelRenderPageOptics, FormModelVisibilityOptics }
 import uk.gov.hmrc.gform.graph.RecData
@@ -48,7 +48,7 @@ object FormModelOptics {
       FormModel.empty[Visibility],
       RecData.empty,
       EvaluationResults.empty,
-      List.empty[(Int, List[GraphNode])],
+      GraphData.empty,
       BooleanExprCache.empty)
   )
 

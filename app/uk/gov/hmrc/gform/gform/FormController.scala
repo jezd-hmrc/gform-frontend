@@ -320,8 +320,6 @@ class FormController(
               //val groupComponentId = FormComponentId(groupId.substring(startPos))
               //println("[processAddGroup] groupId         : " + (groupId))
               //println("[processAddGroup] startPos        : " + (startPos))
-              println("[processAddGroup] modelComponentId: " + (modelComponentId))
-
               val variadicFormData = processData.formModelOptics.pageOpticsData
               val updatedVariadicFormData = variadicFormData.addOne(modelComponentId.increment -> "")
               //val maybeGroupFc = findFormComponent(modelComponentId, processData.formModel)

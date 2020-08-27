@@ -37,7 +37,23 @@ sealed trait Expr extends Product with Serializable {
     case FormTemplateCtx(value: FormTemplateProp)   => this :: Nil
     case ParamCtx(_)                                => this :: Nil
     case LinkCtx(_)                                 => this :: Nil
+  }
 
+  def sums: List[Sum] = this match {
+    case Add(field1: Expr, field2: Expr)            => field1.sums ++ field2.sums
+    case Multiply(field1: Expr, field2: Expr)       => field1.sums ++ field2.sums
+    case Subtraction(field1: Expr, field2: Expr)    => field1.sums ++ field2.sums
+    case Else(field1: Expr, field2: Expr)           => field1.sums ++ field2.sums
+    case FormCtx(formComponentId: FormComponentId)  => Nil
+    case sum @ Sum(field1: Expr)                    => sum :: Nil
+    case AuthCtx(value: AuthInfo)                   => Nil
+    case UserCtx(value: UserField)                  => Nil
+    case Constant(value: String)                    => Nil
+    case HmrcRosmRegistrationCheck(value: RosmProp) => Nil
+    case Value                                      => Nil
+    case FormTemplateCtx(value: FormTemplateProp)   => Nil
+    case ParamCtx(_)                                => Nil
+    case LinkCtx(_)                                 => Nil
   }
 }
 final case class Add(field1: Expr, field2: Expr) extends Expr
@@ -60,8 +76,7 @@ object FormCtx {
 }
 
 object Expr {
-  val additionIdentity = 0
-  val additionIdentityExpr: Expr = Constant(additionIdentity.toString)
+  val additionIdentity: Expr = Constant("0")
   implicit val format: OFormat[Expr] = derived.oformat
   implicit val equal: Eq[Expr] = Eq.fromUniversalEquals
 }

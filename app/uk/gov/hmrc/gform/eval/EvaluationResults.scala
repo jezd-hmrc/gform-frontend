@@ -37,6 +37,8 @@ case class EvaluationResults(
 ) {
 
   def +(expr: TypedExpr, result: ExpressionResult): EvaluationResults = this.copy(exprMap = exprMap + (expr -> result))
+  def ++(otherExprMap: Map[TypedExpr, ExpressionResult]): EvaluationResults =
+    this.copy(exprMap = exprMap ++ otherExprMap)
 
   def get(typedExpr: TypedExpr): Option[ExpressionResult] = exprMap.get(typedExpr)
 

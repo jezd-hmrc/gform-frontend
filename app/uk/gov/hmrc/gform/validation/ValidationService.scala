@@ -25,7 +25,6 @@ import uk.gov.hmrc.gform.controllers.CacheData
 import uk.gov.hmrc.gform.fileupload._
 import uk.gov.hmrc.gform.gformbackend.GformConnector
 import uk.gov.hmrc.gform.graph.Recalculation
-import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.lookup.LookupRegistry
 import uk.gov.hmrc.gform.models.{ FormModel, FormModelBuilder, PageModel, Repeater, Singleton, Visibility }
 import uk.gov.hmrc.gform.models.optics.{ DataOrigin, FormModelVisibilityOptics }

@@ -34,7 +34,7 @@ object FrontEndSubmissionVariablesBuilder extends IdentifierExtractor {
 
     val identifierValue = formModelVisibilityOptics.formModel.allFormComponents
       .collectFirst {
-        case HasExpr(SingleExpr(UserCtx(EnrolledIdentifier))) =>
+        case HasExpr(UserCtx(EnrolledIdentifier)) =>
           processContext(retrievals, formTemplate.authConfig)
       }
       .getOrElse("")

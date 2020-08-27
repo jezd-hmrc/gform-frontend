@@ -69,7 +69,7 @@ class FormModelBuilder[E, F[_]: Functor](
     formModel: FormModel[Interim]
   ): F[RecalculationResult] = {
     val typedExpressionLookup: Map[FormComponentId, TypedExpr] = formModel.allFormComponents.collect {
-      case fc @ HasExpr(SingleExpr(expr)) => fc.id -> formModel.explicitTypedExpr(expr, fc.id)
+      case fc @ HasExpr(expr) => fc.id -> formModel.explicitTypedExpr(expr, fc.id)
     }.toMap
 
     val evaluationContext =
@@ -132,7 +132,7 @@ class FormModelBuilder[E, F[_]: Functor](
       formModelVisibility,
       formModelVisibilityOptics.recData,
       formModelVisibilityOptics.evaluationResults,
-      formModelVisibilityOptics.graphTopologicalOrder,
+      formModelVisibilityOptics.graphData,
       formModelVisibilityOptics.booleanExprCache
     )
 
@@ -177,7 +177,7 @@ class FormModelBuilder[E, F[_]: Functor](
 
     toEvaluationResults(data, formModel).map { recalculationResult =>
       val evaluationResults = recalculationResult.evaluationResults
-      val graphTopologicalOrder = recalculationResult.graphTopologicalOrder
+      val graphData = recalculationResult.graphData
       val booleanExprCache = recalculationResult.booleanExprCache
       val visibilityFormModel: FormModel[Visibility] = formModel.filter[Visibility] { pageModel =>
         pageModel.getIncludeIf.fold(true) { includeIf =>
@@ -186,7 +186,7 @@ class FormModelBuilder[E, F[_]: Functor](
       }
 
       val visibleTypedExprs: List[(FormComponentId, TypedExpr)] = visibilityFormModel.allFormComponents.collect {
-        case fc @ HasExpr(SingleExpr(expr)) => (fc.id, visibilityFormModel.explicitTypedExpr(expr, fc.id))
+        case fc @ HasExpr(expr) => (fc.id, visibilityFormModel.explicitTypedExpr(expr, fc.id))
       }
 
       val visibleVariadicData: VariadicFormData[SourceOrigin.Current] =
@@ -201,12 +201,7 @@ class FormModelBuilder[E, F[_]: Functor](
 
       val recData: RecData[SourceOrigin.Current] = RecData.empty.copy(variadicFormData = currentData)
 
-      new FormModelVisibilityOptics(
-        visibilityFormModel,
-        recData,
-        evaluationResults,
-        graphTopologicalOrder,
-        booleanExprCache)
+      new FormModelVisibilityOptics(visibilityFormModel, recData, evaluationResults, graphData, booleanExprCache)
     }
 
   }

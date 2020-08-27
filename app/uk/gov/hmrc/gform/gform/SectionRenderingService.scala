@@ -41,7 +41,6 @@ import uk.gov.hmrc.gform.controllers.Origin
 import uk.gov.hmrc.gform.controllers.helpers.FormDataHelpers
 import uk.gov.hmrc.gform.fileupload.Envelope
 import uk.gov.hmrc.gform.gform.handlers.FormHandlerResult
-import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.lookup.{ AjaxLookup, LookupLabel, LookupRegistry, RadioLookup }
 import uk.gov.hmrc.gform.models.{ Atom, DataExpanded }
 import uk.gov.hmrc.gform.models.ids.ModelComponentId
@@ -119,7 +118,8 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     envelope: Envelope,
     formMaxAttachmentSizeMB: Int,
     retrievals: MaterialisedRetrievals,
-    formLevelHeading: Boolean
+    formLevelHeading: Boolean,
+    specialAttributes: Map[String, String]
   ) {
     private val modelComponentIds: List[ModelComponentId] =
       singleton.allFormComponents.flatMap(_.multiValueId.toModelComponentIds)
@@ -263,7 +263,9 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
       envelope,
       formMaxAttachmentSizeMB,
       retrievals,
-      formLevelHeading)
+      formLevelHeading,
+      specialAttributes = Map.empty
+    )
     val actionForm = uk.gov.hmrc.gform.gform.routes.FormController
       .updateFormData(formTemplate._id, maybeAccessCode, sectionNumber, fastForward)
 
@@ -272,7 +274,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     val listResult = validationResult.formFieldValidationResults(page)
 
     val javascript =
-      JavascriptMaker.generateJs(sectionNumber, formModelOptics, formTemplate)
+      JavascriptMaker.generateJs(sectionNumber, formModelOptics)
 
     val hiddenTemplateFields =
       Fields.getHiddenTemplateFields(singleton, formModelOptics, lookupRegistry.extractors)
@@ -398,7 +400,8 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
       Envelope.empty,
       0,
       retrievals,
-      formLevelHeading = false
+      formLevelHeading = false,
+      specialAttributes = Map.empty
     )
 
     val confirm = formTemplate.formCategory match {
@@ -484,7 +487,8 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
       Envelope.empty,
       0,
       retrievals,
-      formLevelHeading = false
+      formLevelHeading = false,
+      specialAttributes = Map.empty
     )
 
     val htmlContent: Content =
@@ -549,7 +553,8 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
       Envelope.empty,
       0,
       emptyRetrievals,
-      formLevelHeading = false
+      formLevelHeading = false,
+      specialAttributes = Map.empty
     )
     val listResult = errors.map { case (_, validationResult) => validationResult }
     val snippets =
@@ -929,10 +934,16 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     message: Messages,
     l: LangADT,
     sse: SmartStringEvaluator) = {
-    //val validatedValue = buildFormFieldValidationResult(formComponent, extraInfo, validatedType, data)
     val formFieldValidationResult: FormFieldValidationResult = validationResult(formComponent)
-    val nestedEi = extraInfo.copy(formLevelHeading = false)
-    val revealingChoicesList: List[(SmartString, Int => Boolean, Option[NonEmptyList[Html]])] =
+    val nestedEi: FormComponentId => Int => ExtraInfo = formComponentId =>
+      index =>
+        extraInfo
+          .copy(
+            formLevelHeading = false,
+            specialAttributes = Map("data-checkbox" -> (formComponent.id.value + index)) // Used by javascript for dynamic calculations
+      )
+    val revealingChoicesList
+      : List[(SmartString, Int => Boolean, FormComponentId => Int => Option[NonEmptyList[Html]])] =
       options.map { o =>
         val isSelected: Int => Boolean =
           index =>
@@ -940,14 +951,24 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
               .get(formComponent.modelComponentId)
               .fold(o.selected)(_.contains(index.toString))
 
-        val revealingFieldsHtml = o.revealingFields
-          .filterNot(_.onlyShowOnSummary)
-          .map(fc =>
-            htmlFor(RenderUnit.pure(fc), formTemplateId, nestedEi, validationResult, obligations = obligations))
+        val revealingFieldsHtml: FormComponentId => Int => List[Html] = controlledBy =>
+          index =>
+            o.revealingFields
+              .filterNot(_.onlyShowOnSummary)
+              .map(
+                fc =>
+                  htmlFor(
+                    RenderUnit.pure(fc),
+                    formTemplateId,
+                    nestedEi(controlledBy)(index),
+                    validationResult,
+                    obligations = obligations))
 
-        val maybeRevealingFieldsHtml = revealingFieldsHtml match {
-          case x :: xs => Some(NonEmptyList(x, xs))
-          case Nil     => None
+        val maybeRevealingFieldsHtml: FormComponentId => Int => Option[NonEmptyList[Html]] = controlledBy =>
+          index =>
+            revealingFieldsHtml(controlledBy)(index) match {
+              case x :: xs => Some(NonEmptyList(x, xs))
+              case Nil     => None
         }
 
         (o.choice, isSelected, maybeRevealingFieldsHtml)
@@ -989,7 +1010,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
             value = index.toString,
             content = content.Text(option.value),
             checked = isChecked(index),
-            conditionalHtml = revealingFieldsHtml(maybeRevealingFieldsHtml)
+            conditionalHtml = revealingFieldsHtml(maybeRevealingFieldsHtml(formComponent.id)(index))
           )
       }
 
@@ -1012,7 +1033,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
             value = Some(index.toString),
             content = content.Text(option.value),
             checked = isChecked(index),
-            conditionalHtml = revealingFieldsHtml(maybeRevealingFieldsHtml)
+            conditionalHtml = revealingFieldsHtml(maybeRevealingFieldsHtml(formComponent.id)(index))
           )
       }
 
@@ -1310,7 +1331,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
               value = maybeCurrentValue,
               errorMessage = hiddenErrorMessage,
               classes = s"$hiddenClass $sizeClasses",
-              attributes = attributes
+              attributes = ei.specialAttributes ++ attributes
             )
 
             new hmrcCurrencyInput(govukErrorMessage, govukHint, govukLabel)(currencyInput)
@@ -1324,7 +1345,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
               value = maybeCurrentValue,
               errorMessage = hiddenErrorMessage,
               classes = s"$hiddenClass $sizeClasses",
-              attributes = attributes
+              attributes = ei.specialAttributes ++ attributes
             )
             val govukInput: Html = new components.govukInput(govukErrorMessage, govukHint, govukLabel)(input)
 

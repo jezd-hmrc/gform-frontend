@@ -22,6 +22,6 @@ import uk.gov.hmrc.gform.sharedmodel.graph.GraphNode
 
 class RecalculationResult(
   val evaluationResults: EvaluationResults,
-  val graphTopologicalOrder: Traversable[(Int, List[GraphNode])],
+  val graphData: GraphData,
   val booleanExprCache: BooleanExprCache
 )

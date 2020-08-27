@@ -52,13 +52,14 @@ class DebugController(
   def exprs(formTemplateId: FormTemplateId) =
     auth.async[SectionSelectorType.Normal](formTemplateId, None) {
       implicit request => implicit lang => cache => sse => formModelOptics =>
-        val sss: List[JsObject] = formModelOptics.formModelVisibilityOptics.graphTopologicalOrder.toList.map {
-          case (layerNumber, nodes) =>
-            Json.obj(
-              "layerNumber" -> layerNumber.toString,
-              "nodes"       -> nodes.toString
-            )
-        }
+        val graphTopologicalOrder: List[JsObject] =
+          formModelOptics.formModelVisibilityOptics.graphData.graphTopologicalOrder.toList.map {
+            case (layerNumber, nodes) =>
+              Json.obj(
+                "layerNumber" -> layerNumber.toString,
+                "nodes"       -> nodes.toString
+              )
+          }
 
         val exprs: List[JsObject] =
           formModelOptics.formModelVisibilityOptics.evaluationResults.exprMap.toList.sortBy(_._1.toString).map {
@@ -71,7 +72,7 @@ class DebugController(
 
         val result = Json.obj(
           "expression" -> Json.toJson(exprs),
-          "graph"      -> Json.toJson(sss)
+          "graph"      -> Json.toJson(graphTopologicalOrder)
         )
 
         Future.successful(Ok(result))

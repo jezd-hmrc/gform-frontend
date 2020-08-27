@@ -24,7 +24,6 @@ import cats.syntax.functor._
 import cats.{ Monad, MonadError }
 import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
 import uk.gov.hmrc.gform.graph.{ RecData, Recalculation }
-import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.models.optics.{ DataOrigin, FormModelRenderPageOptics, FormModelVisibilityOptics }
 import uk.gov.hmrc.gform.sharedmodel.BooleanExprCache
 import uk.gov.hmrc.gform.sharedmodel.form.{ FormModelOptics, VisitIndex }

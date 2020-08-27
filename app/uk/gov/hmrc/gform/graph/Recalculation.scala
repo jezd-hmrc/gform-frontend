@@ -33,7 +33,7 @@ import scalax.collection.GraphEdge._
 import shapeless.syntax.typeable._
 import uk.gov.hmrc.gform.auth.UtrEligibilityRequest
 import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
-import uk.gov.hmrc.gform.eval.{ AllFormComponentExpressions, AllFormTemplateExpressions, EvaluationContext, EvaluationResults, ExprMetadata, ExpressionResult, SeissEligibilityChecker }
+import uk.gov.hmrc.gform.eval.{ AllFormComponentExpressions, AllFormTemplateExpressions, EvaluationContext, EvaluationResults, ExprMetadata, ExpressionResult, SeissEligibilityChecker, TypedExpr }
 import uk.gov.hmrc.gform.models.{ FormModel, Interim, PageModel }
 import uk.gov.hmrc.gform.models.ids.ModelComponentId
 import uk.gov.hmrc.gform.sharedmodel.{ AccessCode, BooleanExprCache, SourceOrigin, VariadicFormData }
@@ -161,6 +161,11 @@ class Recalculation[F[_]: Monad, E](
 
       val (evResultF: StateT[F, RecalculationState, EvaluationResults], recData: RecData[SourceOrigin.OutOfDate]) = ctx
 
+      val sums: List[Sum] = evaluationContext.typedExpressionLookup.values.flatMap(_.expr.sums).toList
+      val isSum: Set[FormComponentId] = sums.collect {
+        case Sum(FormCtx(formComponentId)) => formComponentId
+      }.toSet
+
       val evaluationResults: StateT[F, RecalculationState, EvaluationResults] = graphLayer.foldMapM {
         case GraphNode.Simple(fcId) =>
           for {
@@ -183,9 +188,28 @@ class Recalculation[F[_]: Monad, E](
           for {
             evResult <- evResultF
           } yield {
+            val sumsToAdd: List[FormComponentId] =
+              expr.leafs
+                .collect {
+                  case FormCtx(formComponentId) if isSum(formComponentId) => formComponentId
+                }
+
+            val sumResults: Map[TypedExpr, ExpressionResult] = sumsToAdd
+              .map { formComponentId =>
+                val sumIds = recData.variadicFormData.forBaseComponentId(formComponentId.baseComponentId)
+
+                sumIds.map {
+                  case (k, v) =>
+                    val typedExpr = formModel.toTypedExpr(FormCtx(k.toFormComponentId))
+                    var exprResult = evResult.evalTyped(typedExpr, recData, evaluationContext)
+                    (typedExpr, exprResult)
+                }.toMap
+              }
+              .foldLeft(Map.empty[TypedExpr, ExpressionResult])(_ ++ _)
+
             val typedExpr = formModel.toTypedExpr(expr)
-            val e: ExpressionResult = evResult.evalTyped(typedExpr, recData, evaluationContext)
-            evResult + (typedExpr, e)
+            val exprResult: ExpressionResult = evResult.evalTyped(typedExpr, recData, evaluationContext)
+            evResult ++ sumResults + (typedExpr, exprResult)
           }
 
       }
@@ -250,7 +274,10 @@ class Recalculation[F[_]: Monad, E](
           case (cacheUpdate, (evaluationResults, graphTopologicalOrder)) =>
             val finalEvaluationResults =
               implicitly[Monoid[EvaluationResults]].combine(cacheUpdate.evaluationResults, evaluationResults)
-            new RecalculationResult(finalEvaluationResults, graphTopologicalOrder, cacheUpdate.booleanExprCache)
+            new RecalculationResult(
+              finalEvaluationResults,
+              GraphData(graphTopologicalOrder, graph),
+              cacheUpdate.booleanExprCache)
         }
     }
   }

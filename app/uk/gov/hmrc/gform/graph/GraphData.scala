@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.gform.models.javascript
+package uk.gov.hmrc.gform.graph
 
-import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormComponent, FormComponentId }
+import scalax.collection.Graph
+import scalax.collection.GraphEdge.DiEdge
+import uk.gov.hmrc.gform.sharedmodel.graph.GraphNode
 
-sealed trait JsFormComponentModel extends Product with Serializable
+case class GraphData(graphTopologicalOrder: Traversable[(Int, List[GraphNode])], graph: Graph[GraphNode, DiEdge])
 
-case class JsRevealingChoiceModel(fcId: FormComponentId, fc: FormComponent) extends JsFormComponentModel
-case class JsFormComponentWithCtx(fcWithCtx: FormComponentWithCtx) extends JsFormComponentModel
+object GraphData {
+  val empty = GraphData(List.empty[(Int, List[GraphNode])], Graph.empty)
+}

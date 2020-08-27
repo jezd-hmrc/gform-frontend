@@ -19,7 +19,6 @@ package uk.gov.hmrc.gform.models
 import cats.instances.int._
 import cats.syntax.eq._
 import uk.gov.hmrc.gform.models.ids.{ ModelComponentId, MultiValueId }
-import uk.gov.hmrc.gform.models.javascript.JsFormComponentModel
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.IsRevealingChoice
 import uk.gov.hmrc.gform.sharedmodel.SmartString
 import uk.gov.hmrc.gform.sharedmodel.form.FormModelOptics
@@ -29,8 +28,6 @@ sealed trait PageModel[A <: PageMode] extends Product with Serializable {
   def title: SmartString = fold(_.page.title)(_.expandedTitle)
 
   def isTerminationPage = fold(_.page.isTerminationPage)(_ => false)
-
-  def jsFormComponentModels: List[JsFormComponentModel] = fold(_.page.fields.flatMap(_.jsFormComponentModels))(_ => Nil)
 
   def isAddToList(addToListId: AddToListId): Boolean =
     fold(_.source.byAddToListId(addToListId))(_.source.byAddToListId(addToListId))

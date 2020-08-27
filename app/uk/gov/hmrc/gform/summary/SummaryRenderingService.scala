@@ -37,7 +37,6 @@ import uk.gov.hmrc.gform.fileupload.{ Envelope, FileUploadAlgebra }
 import uk.gov.hmrc.gform.gform.{ HtmlSanitiser, SummaryPagePurpose }
 import uk.gov.hmrc.gform.gform.routes
 import uk.gov.hmrc.gform.graph.Recalculation
-import uk.gov.hmrc.gform.keystore.RepeatingComponentService
 import uk.gov.hmrc.gform.models.{ Atom, FastForward, FormModel, FormModelBuilder, PageModel, Repeater, SectionSelector, SectionSelectorType, Singleton, Visibility }
 import uk.gov.hmrc.gform.models.optics.DataOrigin
 import uk.gov.hmrc.gform.models.ids.ModelComponentId

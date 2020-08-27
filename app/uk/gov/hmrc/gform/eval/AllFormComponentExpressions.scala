@@ -71,7 +71,7 @@ object AllFormComponentExpressions extends ExprExtractorHelpers {
         componentTypeExprs
 
     val explicitExprs = fc match {
-      case HasExpr(SingleExpr(expr)) =>
+      case HasExpr(expr) =>
         Some(ExprMetadata.Plain(InferrableExpr(expr, InferringRule.Explicit(fc.id))))
       case _ => None
     }

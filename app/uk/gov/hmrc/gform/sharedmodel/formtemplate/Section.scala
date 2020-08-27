@@ -23,7 +23,6 @@ import cats.syntax.eq._
 import julienrf.json.derived
 import play.api.libs.json._
 import uk.gov.hmrc.gform.models.Basic
-import uk.gov.hmrc.gform.models.javascript.JsFormComponentModel
 import uk.gov.hmrc.gform.sharedmodel.{ SmartString, VariadicFormData }
 
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.JsonUtils.nelFormat

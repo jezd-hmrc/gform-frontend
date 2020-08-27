@@ -39,9 +39,6 @@ case class FormModel[A <: PageMode](pagesWithIndex: List[(PageModel[A], SectionN
   val allMultiValueIds: List[MultiValueId] =
     allFormComponents.map(_.multiValueId)
 
-  /* val allVariadicValueIds: Set[VariadicValueId] =
-   *   allFormComponentIdTypes.flatMap(_.toVariadicValueIds).toSet */
-
   val allModelComponentIds: Set[ModelComponentId] = allMultiValueIds.flatMap(_.toModelComponentIds).toSet
 
   val allMultiSelectionIds: Set[ModelComponentId] = allFormComponents

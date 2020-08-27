@@ -17,7 +17,7 @@
 package uk.gov.hmrc.gform.models.optics
 
 import uk.gov.hmrc.gform.eval.{ EvaluationResults, ExpressionResult }
-import uk.gov.hmrc.gform.graph.RecData
+import uk.gov.hmrc.gform.graph.{ GraphData, RecData }
 import uk.gov.hmrc.gform.models.{ FormModel, PageModel, Visibility }
 import uk.gov.hmrc.gform.models.ids.ModelComponentId
 import uk.gov.hmrc.gform.sharedmodel.{ BooleanExprCache, SourceOrigin, VariadicValue }
@@ -29,7 +29,7 @@ class FormModelVisibilityOptics[D <: DataOrigin](
   val formModel: FormModel[Visibility],
   val recData: RecData[SourceOrigin.Current],
   val evaluationResults: EvaluationResults,
-  val graphTopologicalOrder: Traversable[(Int, List[GraphNode])],
+  val graphData: GraphData,
   val booleanExprCache: BooleanExprCache
 ) {
 

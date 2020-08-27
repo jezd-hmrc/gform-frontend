@@ -29,7 +29,7 @@ import uk.gov.hmrc.gform.models.Atom
 import uk.gov.hmrc.gform.models.ExpandUtils._
 import uk.gov.hmrc.gform.models.ids.{ BaseComponentId, ModelComponentId, MultiValueId }
 import uk.gov.hmrc.gform.models.email.{ EmailFieldId, VerificationCodeFieldId, emailFieldId, verificationCodeFieldId }
-import uk.gov.hmrc.gform.models.javascript.{ FormComponentSimple, FormComponentWithGroup, JsFormComponentModel, JsFormComponentWithCtx, JsRevealingChoiceModel }
+import uk.gov.hmrc.gform.models.javascript.{ FormComponentSimple, FormComponentWithGroup }
 import uk.gov.hmrc.gform.sharedmodel.{ LabelHelper, SmartString, SourceOrigin, VariadicFormData }
 
 case class FormComponent(
@@ -87,70 +87,6 @@ case class FormComponent(
 
   def hideOnSummary: Boolean =
     presentationHint.fold(false)(x => x.contains(InvisibleInSummary)) || IsInformationMessage.unapply(this).isDefined
-
-  /* private def updateField(i: Int, fc: FormComponent): FormComponent =
-   *   fc.copy(
-   *     label = LabelHelper.buildRepeatingLabel(fc.label, i),
-   *     shortName = LabelHelper.buildRepeatingLabel(fc.shortName, i)) */
-
-  /* private def loop(fc: FormComponent): List[FormComponent] =
-   *   fc.`type` match {
-   *     case Group(fields, max, _, _, _) =>
-   *       val expandedFields =
-   *         for {
-   *           field <- fields
-   *           res <- updateField(1, field) :: (1 until max.getOrElse(1))
-   *                   .map(i => updateField(i + 1, field.copy(id = FormComponentId(i + "_" + field.id.value))))
-   *                   .toList
-   *         } yield res
-   *       expandedFields.flatMap(loop) // for case when there is group inside group (Note: it does not work, we would need to handle prefix)
-   *     case RevealingChoice(options, _) => fc :: options.toList.foldMap(_.revealingFields.map(loop)).flatten
-   *     case _                           => fc :: Nil
-   *   } */
-
-  //lazy val expandedFormComponents: List[FormComponent] = loop(this)
-
-  /* private def addFieldIndex(field: FormComponent, index: Int, group: Group) = {
-   *   val fieldToUpdate = if (index === 0) field else field.copy(id = FormComponentId(index + "_" + field.id.value))
-   *   val i = index + 1
-   *   FormComponentUpdater(
-   *     fieldToUpdate.copy(
-   *       label = LabelHelper.buildRepeatingLabel(field.label, i),
-   *       shortName = LabelHelper.buildRepeatingLabel(field.shortName, i)
-   *     ),
-   *     index,
-   *     group
-   *   ).updatedWithId
-   * } */
-
-  /* def expandGroup[S <: SourceOrigin](data: VariadicFormData[S]): Group => Int => Group =
-   *   group =>
-   *     index => {
-   *       val ids: List[FormComponentId] = groupIndex(index + 1, group)
-   *       val toExpand: Boolean = ids.forall(data.contains) // TODO JoVl gorup expanding implementation
-   *       if (index === 0 || toExpand) {
-   *         group.fields.map(addFieldIndex(_, index, group))
-   *       } else Nil
-   *   } */
-
-  /* private def mkJsFormComponentModels(fc: FormComponent): List[JsFormComponentModel] =
-   *   fc.`type` match {
-   *     case RevealingChoice(options, _) =>
-   *       options.toList.flatMap { option =>
-   *         option.revealingFields.map(rf => JsRevealingChoiceModel(fc.id, rf))
-   *       }
-   *     case group @ Group(fields, max, _, _, _) =>
-   *       (0 until max.getOrElse(1)).toList.flatMap(index =>
-   *         fields.map(field => JsFormComponentWithCtx(FormComponentWithGroup(addFieldIndex(field, index, group), fc))))
-   *     case _ => JsFormComponentWithCtx(FormComponentSimple(fc)) :: Nil
-   *   } */
-
-  /* def expandFormComponent[S <: SourceOrigin](group: Group)(data: VariadicFormData[S]): List[FormComponent] =
-   *   expandByData(this, group, data) */
-
-  //val jsFormComponentModels: List[JsFormComponentModel] = mkJsFormComponentModels(this)
-  val jsFormComponentModels: List[JsFormComponentModel] = List.empty[JsFormComponentModel]
-
 }
 
 object FormComponent {
