@@ -21,7 +21,7 @@ import cats.syntax.eq._
 import cats.syntax.functor._
 import com.softwaremill.quicklens._
 import play.api.libs.json._
-import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
+import uk.gov.hmrc.gform.controllers.{ AuthCache, AuthCacheWithForm, CacheData }
 import uk.gov.hmrc.gform.eval.EvaluationResults
 import uk.gov.hmrc.gform.graph.{ GraphData, Recalculation }
 import uk.gov.hmrc.gform.models.{ DataExpanded, DependencyGraphVerification, FormModel, FormModelBuilder, PageMode, PageModel, SectionSelector, SectionSelectorType, Visibility }
@@ -59,17 +59,28 @@ object FormModelOptics {
 
   def mkFormModelOptics[D <: DataOrigin, F[_]: Functor, U <: SectionSelectorType: SectionSelector](
     data: VariadicFormData[SourceOrigin.OutOfDate],
-    cache: AuthCacheWithForm,
+    cache: AuthCache,
+    cacheData: CacheData,
     recalculation: Recalculation[F, Throwable]
   )(
     implicit
     hc: HeaderCarrier,
     me: MonadError[F, Throwable]
   ): F[FormModelOptics[D]] = {
-    val formModelBuilder = FormModelBuilder.fromCache(cache, recalculation)
+    val formModelBuilder = FormModelBuilder.fromCache(cache, cacheData, recalculation)
     val formModelVisibilityOpticsF: F[FormModelVisibilityOptics[D]] = formModelBuilder.visibilityModel(data)
     formModelVisibilityOpticsF.map { formModelVisibilityOptics =>
       formModelBuilder.renderPageModel(formModelVisibilityOptics)
     }
   }
+
+  def mkFormModelOptics[D <: DataOrigin, F[_]: Functor, U <: SectionSelectorType: SectionSelector](
+    data: VariadicFormData[SourceOrigin.OutOfDate],
+    cache: AuthCacheWithForm,
+    recalculation: Recalculation[F, Throwable]
+  )(
+    implicit
+    hc: HeaderCarrier,
+    me: MonadError[F, Throwable]
+  ): F[FormModelOptics[D]] = mkFormModelOptics(data, cache, cache.toCacheData, recalculation)
 }

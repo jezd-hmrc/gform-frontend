@@ -21,7 +21,7 @@ import uk.gov.hmrc.gform.auth.models.MaterialisedRetrievals
 import uk.gov.hmrc.gform.models.optics.DataOrigin
 import uk.gov.hmrc.gform.sharedmodel.form.{ FormModelOptics, ValidatorsResult }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ EnrolmentSection, FormComponent, FormTemplate }
-import uk.gov.hmrc.gform.validation.FormFieldValidationResult
+import uk.gov.hmrc.gform.validation.{ FormFieldValidationResult, ValidationResult }
 import uk.gov.hmrc.gform.validation.ValidationUtil.ValidatedType
 import uk.gov.hmrc.govukfrontend.views.viewmodels.errorsummary.ErrorLink
 
@@ -31,7 +31,6 @@ package object processor {
     MaterialisedRetrievals,
     EnrolmentSection,
     FormModelOptics[DataOrigin.Mongo],
-    List[(FormComponent, FormFieldValidationResult)],
     List[ErrorLink],
-    ValidatedType[ValidatorsResult]) => Html
+    ValidationResult) => Html
 }

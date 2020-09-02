@@ -53,8 +53,7 @@ object Form {
       FormStatus.format and
       VisitIndex.format and
       thirdPartyDataWithFallback and
-      EnvelopeExpiryDate.optionFormat //and
-    //  EvaluationResults.format
+      EnvelopeExpiryDate.optionFormat
   )(Form.apply _)
 
   private val writes: OWrites[Form] = OWrites[Form](
@@ -67,8 +66,7 @@ object Form {
         FormStatus.format.writes(form.status) ++
         VisitIndex.format.writes(form.visitsIndex) ++
         Json.obj("thirdPartyData" -> ThirdPartyData.format.writes(form.thirdPartyData)) ++
-        EnvelopeExpiryDate.optionFormat.writes(form.envelopeExpiryDate) /// ++
-    //EvaluationResults.format.writes(form.evaluationResults)
+        EnvelopeExpiryDate.optionFormat.writes(form.envelopeExpiryDate)
   )
 
   implicit val format: OFormat[Form] = OFormat[Form](reads, writes)

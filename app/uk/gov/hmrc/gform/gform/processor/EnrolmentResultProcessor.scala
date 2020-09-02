@@ -34,6 +34,7 @@ import uk.gov.hmrc.gform.models.optics.{ DataOrigin, FormModelVisibilityOptics }
 import uk.gov.hmrc.gform.sharedmodel.LangADT
 import uk.gov.hmrc.gform.sharedmodel.form.{ FormModelOptics, ValidatorsResult }
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ EnrolmentSection, FormComponent, FormTemplate }
+import uk.gov.hmrc.gform.validation.ValidationUtil.GformError
 import uk.gov.hmrc.gform.validation.{ FormFieldValidationResult, ValidationResult, ValidationUtil }
 import uk.gov.hmrc.gform.validation.ValidationUtil.ValidatedType
 import uk.gov.hmrc.gform.views.html
@@ -45,77 +46,38 @@ class EnrolmentResultProcessor(
   formTemplate: FormTemplate,
   retrievals: MaterialisedRetrievals,
   enrolmentSection: EnrolmentSection,
-  formModelVisibilityOptics: FormModelVisibilityOptics[DataOrigin.Mongo],
+  formModelOptics: FormModelOptics[DataOrigin.Mongo],
   frontendAppConfig: FrontendAppConfig
 ) {
 
-  private def getErrorMap(
-    validatedType: ValidatedType[ValidatorsResult]
-  ): ValidationResult = {
-    val enrolmentFields = Fields.flattenGroups(enrolmentSection.fields)
-    ValidationUtil
-      .evaluateValidationResult(enrolmentFields, validatedType, formModelVisibilityOptics, Envelope.empty)
-  }
-
-  /* private def evaluateValidation(
-   *   v: ValidatedType[ValidatorsResult],
-   *   fields: List[FormComponent],
-   *   formModelVisibilityOptics: FormModelVisibilityOptics[DataOrigin.Mongo],
-   *   envelope: Envelope
-   * ): List[(FormComponent, FormFieldValidationResult)] =
-   *   // We need to keep the formComponent order as they appear on the form for page-level-error rendering, do not convert to map
-   *   ValidationUtil
-   *     .evaluateValidationResult(fields, v, formModelVisibilityOptics, envelope)
-   *     .map(ffvr => ffvr.fieldValue -> ffvr) */
-
-  private def getResult(validationResult: ValidatedType[ValidatorsResult], globalErrors: List[ErrorLink]): Result = {
-    val errorMap = getErrorMap(validationResult)
-    val data: FormModelOptics[DataOrigin.Mongo] = ???
-    val results: List[(FormComponent, FormFieldValidationResult)] = ???
+  private def getResult(validationResult: ValidationResult, globalErrors: List[ErrorLink]): Result =
     Ok(
       renderEnrolmentSection(
         formTemplate,
         retrievals,
         enrolmentSection,
-        data,
-        results, // errorMap,
+        formModelOptics,
         globalErrors,
         validationResult
       )
     )
-  }
 
   def recoverEnrolmentError(implicit request: Request[AnyContent], messages: Messages): SubmitEnrolmentError => Result =
     enrolmentError => {
 
-      /* def convertEnrolmentError(see: SubmitEnrolmentError): (ValidatedType[ValidatorsResult], List[Html]) = see match {
-       *   case RegimeIdNotMatch(identifierRecipe) =>
-       *     val regimeIdError = Map[ModelComponentId, Set[String]](
-       *       identifierRecipe.value.formComponentId.modelComponentId -> Set(messages("enrolment.error.regimeId")))
-       *     (Invalid(regimeIdError), List.empty)
-       *   case NoIdentifierProvided =>
-       *     val globalError = html.form.errors.error_global(messages("enrolment.error.missingIdentifier"))
-       *     (ValidatorsResult.empty.valid, globalError :: Nil)
-       *   case EnrolmentFormNotValid(invalid) => (Invalid(invalid), List.empty)
-       * } */
-
-      def convertEnrolmentError(see: SubmitEnrolmentError): (ValidatedType[ValidatorsResult], List[ErrorLink]) =
+      def convertEnrolmentError(see: SubmitEnrolmentError): (ValidationResult, List[ErrorLink]) =
         see match {
           case RegimeIdNotMatch(identifierRecipe) =>
-            /* val regimeIdError = Map(identifierRecipe.value.toFieldId -> Set(messages("enrolment.error.regimeId")))
-             * (Invalid(regimeIdError), List.empty) */
-            val regimeIdError = Map[ModelComponentId, Set[String]](
+            val regimeIdError: GformError = Map(
               identifierRecipe.value.formComponentId.modelComponentId -> Set(messages("enrolment.error.regimeId")))
-            (Invalid(regimeIdError), List.empty)
-
+            ??? // (Invalid(regimeIdError), List.empty)
           case NoIdentifierProvided =>
             val globalError = ErrorLink(
               content = content.Text(messages("enrolment.error.missingIdentifier"))
             )
-            (ValidatorsResult.empty.valid, globalError :: Nil)
-          case EnrolmentFormNotValid(invalid) => (Invalid(invalid), List.empty)
+            (ValidationResult.empty, globalError :: Nil)
+          case EnrolmentFormNotValid(validationResult) => (validationResult, List.empty)
         }
-
       val (validationResult, globalErrors) = convertEnrolmentError(enrolmentError)
       getResult(validationResult, globalErrors)
 
@@ -134,7 +96,7 @@ class EnrolmentResultProcessor(
           content = content.HtmlContent(html.form.errors.error_global_enrolment(formTemplate._id)))
 
         val globalErrors = globalError :: Nil
-        val validationResult = ValidatorsResult.empty.valid
+        val validationResult = ValidationResult.empty
         getResult(validationResult, globalErrors)
       case CheckEnrolmentsResult.Failed =>
         // Nothing we can do here, so technical difficulties it is.

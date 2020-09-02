@@ -400,6 +400,7 @@ sealed trait AuthCache {
   def retrievals: MaterialisedRetrievals
   def formTemplate: FormTemplate
   def role: Role
+  def accessCode: Option[AccessCode]
 }
 
 case class AuthCacheWithForm(
@@ -417,9 +418,11 @@ case class AuthCacheWithForm(
     FormModelBuilder
       .fromCache(
         this,
+        toCacheData,
         new Recalculation[Id, Throwable](
           SeissEligibilityChecker.alwaysEligible,
-          (s: GraphException) => new IllegalArgumentException(s.reportProblem)))
+          (s: GraphException) => new IllegalArgumentException(s.reportProblem))
+      )
       .dependencyGraphValidation
   }
 
@@ -441,6 +444,7 @@ case class AuthCacheWithoutForm(
   formTemplate: FormTemplate,
   role: Role
 ) extends AuthCache {
+  override val accessCode: Option[AccessCode] = None
   def toCacheData: CacheData = new CacheData(
     EnvelopeId(""),
     ThirdPartyData.empty,

@@ -21,7 +21,7 @@ import cats.instances.list._
 import cats.syntax.eq._
 import cats.syntax.foldable._
 import cats.syntax.functor._
-import uk.gov.hmrc.gform.controllers.AuthCacheWithForm
+import uk.gov.hmrc.gform.controllers.{ AuthCache, CacheData }
 import uk.gov.hmrc.gform.eval.{ EvaluationContext, EvaluationResults, ExpressionResult, TypedExpr }
 import uk.gov.hmrc.gform.gform.{ FormComponentUpdater, PageUpdater }
 import uk.gov.hmrc.gform.graph.{ RecData, Recalculation, RecalculationResult }
@@ -34,7 +34,8 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 object FormModelBuilder {
   def fromCache[E, F[_]: Functor](
-    cache: AuthCacheWithForm,
+    cache: AuthCache,
+    cacheData: CacheData,
     recalculation: Recalculation[F, E]
   )(
     implicit
@@ -44,8 +45,8 @@ object FormModelBuilder {
     new FormModelBuilder(
       cache.retrievals,
       cache.formTemplate,
-      cache.form.thirdPartyData,
-      cache.form.envelopeId,
+      cacheData.thirdPartyData,
+      cacheData.envelopeId,
       cache.accessCode,
       recalculation
     )

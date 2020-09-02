@@ -17,10 +17,12 @@
 package uk.gov.hmrc.gform.models
 
 import uk.gov.hmrc.gform.sharedmodel.formtemplate.{ FormTemplate, Section }
+import uk.gov.hmrc.gform.sharedmodel.formtemplate.HasEnrolmentSection
 
 sealed trait SectionSelectorType extends Product with Serializable
 
 object SectionSelectorType {
+  trait Enrolment extends SectionSelectorType
   trait Normal extends SectionSelectorType
   trait WithDeclaration extends SectionSelectorType
   trait WithAcknowledgement extends SectionSelectorType
@@ -46,6 +48,16 @@ object SectionSelector {
       formTemplate.sections ::: destinationSections
     }
 
+  }
+
+  implicit val enrolmentOnly = new SectionSelector[SectionSelectorType.Enrolment] {
+
+    def getSections(formTemplate: FormTemplate): List[Section] =
+      formTemplate.authConfig match {
+        case HasEnrolmentSection((_, enrolmentSection, _, _)) =>
+          enrolmentSection.toSection :: Nil
+        case _ => Nil
+      }
   }
 
   implicit val withAcknowledgement = new SectionSelector[SectionSelectorType.WithAcknowledgement] {

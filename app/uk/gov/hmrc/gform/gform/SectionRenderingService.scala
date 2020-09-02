@@ -530,7 +530,7 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
     retrievals: MaterialisedRetrievals,
     enrolmentSection: EnrolmentSection,
     formModelOptics: FormModelOptics[DataOrigin.Mongo],
-    errors: List[(FormComponent, FormFieldValidationResult)],
+    //errors: List[(FormComponent, FormFieldValidationResult)],
     globalErrors: List[ErrorLink],
     validationResult: ValidationResult
   )(
@@ -556,10 +556,12 @@ class SectionRenderingService(frontendAppConfig: FrontendAppConfig, lookupRegist
       formLevelHeading = false,
       specialAttributes = Map.empty
     )
-    val listResult = errors.map { case (_, validationResult) => validationResult }
+    val listResult = validationResult.formFieldValidationResults //.map { case (_, validationResult) => validationResult }
     val snippets =
-      enrolmentSection.toPage.renderUnits.map(renderUnit =>
-        htmlFor(renderUnit, formTemplate._id, ei, validationResult, obligations = NotChecked))
+      enrolmentSection.toPage.renderUnits.map { renderUnit =>
+        println("[renderEnrolmentSection] validationResult: " + (validationResult.formFieldValidationResults))
+        htmlFor(renderUnit, formTemplate._id, ei, validationResult, obligations = NotChecked)
+      }
     val pageLevelErrorHtml = generatePageLevelErrorHtml(listResult, globalErrors)
     val renderingInfo = SectionRenderingInformation(
       formTemplate._id,
